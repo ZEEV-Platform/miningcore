@@ -30,6 +30,9 @@ public enum CoinFamily
 
     [EnumMember(Value = "ergo")]
     Ergo,
+
+    [EnumMember(Value = "handshake")]
+    Handshake,
 }
 
 public abstract partial class CoinTemplate
@@ -132,6 +135,7 @@ public abstract partial class CoinTemplate
         {CoinFamily.Cryptonote, typeof(CryptonoteCoinTemplate)},
         {CoinFamily.Ethereum, typeof(EthereumCoinTemplate)},
         {CoinFamily.Ergo, typeof(ErgoCoinTemplate)},
+        {CoinFamily.Handshake, typeof(HandshakeCoinTemplate)},
     };
 }
 
@@ -508,6 +512,10 @@ public partial class EthereumCoinTemplate : CoinTemplate
 }
 
 public partial class ErgoCoinTemplate : CoinTemplate
+{
+}
+
+public partial class HandshakeCoinTemplate : BitcoinTemplate
 {
 }
 

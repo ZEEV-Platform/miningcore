@@ -23,6 +23,7 @@ using Microsoft.IO;
 using Miningcore.Blockchain.Ergo;
 using Miningcore.Nicehash;
 using Miningcore.Pushover;
+using Miningcore.Blockchain.Handshake;
 
 namespace Miningcore;
 
@@ -169,6 +170,11 @@ public class AutofacModule : Module
 
         builder.RegisterType<EquihashJobManager>();
         builder.RegisterType<ErgoJobManager>();
+
+        //////////////////////
+        // Handshake
+
+        builder.RegisterType<HandshakeJobManager>();
 
         base.Load(builder);
     }

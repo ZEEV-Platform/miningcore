@@ -4338,5 +4338,28 @@
         "explorerBlockLink": "https://explorer.ergoplatform.com/en/blocks/$hash$",
         "explorerTxLink": "https://explorer.ergoplatform.com/en/transactions/{0}",
         "explorerAccountLink": "https://explorer.ergoplatform.com/en/addresses/{0}"
-    }
+    },
+    "zeevcoin": {
+        "name": "Zeevcoin",
+        "canonicalName": "Zeevcoin",
+        "symbol": "ZEEV",
+        "family": "handshake",
+        "website": "https://www.zeevcoin.org/",
+        "market": "https://coinmarketcap.com/currencies/bitcoin/",
+        "twitter": "https://twitter.com/bitcoin",
+        "telegram": "",
+        "discord": "",
+        "coinbaseHasher": {
+            "hash": "handshake"
+        },
+        "headerHasher": {
+            "hash": "handshake"
+        },
+        "blockHasher": {
+            "hash": "handshake"
+        },
+        "explorerBlockLink": "https://www.blockchain.com/btc/block/$hash$",
+        "explorerTxLink": "https://www.blockchain.com/btc/tx/{0}",
+        "explorerAccountLink": "https://www.blockchain.com/btc/address/{0}"
+    },
 }
