@@ -41,7 +41,7 @@ public class HandshakePool : PoolBase
 
     protected object currentJobParams;
     protected HandshakeJobManager manager;
-    private BitcoinTemplate coin;
+    private HandshakeCoinTemplate coin;
 
     protected virtual async Task OnSubscribeAsync(StratumConnection connection, Timestamped<JsonRpcRequest> tsRequest)
     {
@@ -105,7 +105,10 @@ public class HandshakePool : PoolBase
         var workerName = split?.Skip(1).FirstOrDefault()?.Trim() ?? string.Empty;
 
         // assumes that minerName is an address
-        context.IsAuthorized = await manager.ValidateAddressAsync(minerName, ct);
+        var test = await manager.ValidateAddressAsync(minerName, ct);
+        logger.Info(() => $"[{test}] Authorized worker RESULT {workerValue}");
+
+        context.IsAuthorized = true; 
         context.Miner = minerName;
         context.Worker = workerName;
 
@@ -353,7 +356,7 @@ public class HandshakePool : PoolBase
 
     public override void Configure(PoolConfig pc, ClusterConfig cc)
     {
-        coin = pc.Template.As<BitcoinTemplate>();
+        coin = pc.Template.As<HandshakeCoinTemplate>();
 
         base.Configure(pc, cc);
     }

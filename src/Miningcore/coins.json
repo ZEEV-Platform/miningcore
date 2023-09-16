@@ -4350,7 +4350,7 @@
         "telegram": "",
         "discord": "",
         "coinbaseHasher": {
-            "hash": "handshake"
+            "hash": "sha256d"
         },
         "headerHasher": {
             "hash": "handshake"

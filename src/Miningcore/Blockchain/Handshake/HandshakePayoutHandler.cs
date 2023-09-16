@@ -84,7 +84,7 @@ public class HandshakePayoutHandler : PayoutHandlerBase,
         var result = new List<Block>();
         int minConfirmations;
 
-        if(coin is BitcoinTemplate HandshakeTemplate)
+        if(coin is HandshakeCoinTemplate HandshakeTemplate)
             minConfirmations = extraPoolEndpointConfig?.MinimumConfirmations ?? HandshakeTemplate.CoinbaseMinConfimations ?? HandshakeConstants.CoinbaseMinConfimations;
         else
             minConfirmations = extraPoolEndpointConfig?.MinimumConfirmations ?? HandshakeConstants.CoinbaseMinConfimations;
@@ -205,13 +205,13 @@ public class HandshakePayoutHandler : PayoutHandlerBase,
 
         var comment = $"{identifier} Payment";
 
-        if(!(extraPoolConfig?.HasBrokenSendMany == true || poolConfig.Template is BitcoinTemplate { HasBrokenSendMany: true }))
+        if(!(extraPoolConfig?.HasBrokenSendMany == true || poolConfig.Template is HandshakeCoinTemplate { HasBrokenSendMany: true }))
         {
             if(extraPoolPaymentProcessingConfig?.MinersPayTxFees == true)
             {
                 var subtractFeesFrom = amounts.Keys.ToArray();
 
-                if(!poolConfig.Template.As<BitcoinTemplate>().HasMasterNodes)
+                if(!poolConfig.Template.As<HandshakeCoinTemplate>().HasMasterNodes)
                 {
                     args = new object[]
                     {

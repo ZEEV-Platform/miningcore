@@ -27,7 +27,7 @@ public class HandshakeJobManager : HandshakeJobManagerBase<HandshakeJob>
     {
     }
 
-    private BitcoinTemplate coin;
+    private HandshakeCoinTemplate coin;
 
     protected override object[] GetBlockTemplateParams()
     {
@@ -174,7 +174,7 @@ public class HandshakeJobManager : HandshakeJobManagerBase<HandshakeJob>
 
     public override void Configure(PoolConfig pc, ClusterConfig cc)
     {
-        coin = pc.Template.As<BitcoinTemplate>();
+        coin = pc.Template.As<HandshakeCoinTemplate>();
         extraPoolConfig = pc.Extra.SafeExtensionDataAs<HandshakePoolConfigExtra>();
         extraPoolPaymentProcessingConfig = pc.PaymentProcessing?.Extra?.SafeExtensionDataAs<HandshakePoolPaymentProcessingConfigExtra>();
 

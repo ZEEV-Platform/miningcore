@@ -90,4 +90,10 @@ public class BlockTemplate
 
     [JsonExtensionData]
     public IDictionary<string, object> Extra { get; set; }
+
+    public string Mask { get; set; }
+
+    public string TreeRoot { get; set; }
+
+    public string ReservedRoot { get; set; }
 }

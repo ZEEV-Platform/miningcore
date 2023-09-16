@@ -515,8 +515,77 @@ public partial class ErgoCoinTemplate : CoinTemplate
 {
 }
 
-public partial class HandshakeCoinTemplate : BitcoinTemplate
+public partial class HandshakeCoinTemplate : CoinTemplate
 {
+    public class HandshakeNetworkParams
+    {
+        /// <summary>
+        /// Arbitrary extension data
+        /// </summary>
+        [JsonExtensionData]
+        public IDictionary<string, object> Extra { get; set; }
+    }
+
+    [JsonProperty(Order = -7, DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
+    [DefaultValue(BitcoinSubfamily.None)]
+    [JsonConverter(typeof(StringEnumConverter), true)]
+    public BitcoinSubfamily Subfamily { get; set; }
+
+    public JObject CoinbaseHasher { get; set; }
+    public JObject HeaderHasher { get; set; }
+    public JObject BlockHasher { get; set; }
+
+    [JsonProperty("posBlockHasher")]
+    public JObject PoSBlockHasher { get; set; }
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
+    [DefaultValue(1u)]
+    public uint CoinbaseTxVersion { get; set; }
+
+    /// <summary>
+    /// Default transaction comment for coins that REQUIRE tx comments
+    /// </summary>
+    public string CoinbaseTxComment { get; set; }
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool HasPayee { get; set; }
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool HasMasterNodes { get; set; }
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool HasBrokenSendMany { get; set; } = false;
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool HasFounderFee { get; set; }
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool HasMinerFund { get; set; }
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
+    [DefaultValue(1.0d)]
+    public double ShareMultiplier { get; set; } = 1.0d;
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
+    public double? HashrateMultiplier { get; set; }
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool CoinbaseIgnoreAuxFlags { get; set; }
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool IsPseudoPoS { get; set; }
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public JToken BlockTemplateRpcExtraParams { get; set; }
+
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public Dictionary<string, HandshakeNetworkParams> Networks { get; set; }
+
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public int? CoinbaseMinConfimations { get; set; }
+
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public string BlockSerializer { get; set; }
 }
 
 #endregion // Coin Definitions

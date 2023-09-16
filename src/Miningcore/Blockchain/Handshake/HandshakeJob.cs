@@ -31,8 +31,8 @@ public class HandshakeJob
 
     protected Network network;
     protected IDestination poolAddressDestination;
-    protected BitcoinTemplate coin;
-    private BitcoinTemplate.BitcoinNetworkParams networkParams;
+    protected HandshakeCoinTemplate coin;
+    private HandshakeCoinTemplate.HandshakeNetworkParams networkParams;
     protected readonly ConcurrentDictionary<string, bool> submissions = new(StringComparer.OrdinalIgnoreCase);
     protected uint256 blockTargetValue;
     protected byte[] coinbaseFinal;
@@ -116,7 +116,7 @@ public class HandshakeJob
 
             // done
             coinbaseInitial = stream.ToArray();
-            coinbaseInitialHex = coinbaseInitial.ToHexString();
+            coinbaseInitialHex = coinbaseInitial.Take(32).ToHexString();
         }
 
         // build coinbase final
@@ -142,7 +142,9 @@ public class HandshakeJob
 
             // done
             coinbaseFinal = stream.ToArray();
-            coinbaseFinalHex = coinbaseFinal.ToHexString();
+            coinbaseFinalHex = coinbaseFinal[^32..].ToHexString();
+
+            //   coinbaseFinalHex = coinbaseFinal.ToHexString();
         }
     }
 
@@ -293,7 +295,7 @@ public class HandshakeJob
             version = (version & ~versionMask.Value) | (versionBits.Value & versionMask.Value);
 
 #pragma warning disable 618
-        var blockHeader = new BlockHeader
+        var blockHeader = new HandshakeBlockHeader
 #pragma warning restore 618
         {
             Version = unchecked((int) version),
@@ -566,7 +568,7 @@ public class HandshakeJob
         Contract.RequiresNonNull(blockHasher);
         Contract.Requires<ArgumentException>(!string.IsNullOrEmpty(jobId));
 
-        coin = pc.Template.As<BitcoinTemplate>();
+        coin = pc.Template.As<HandshakeCoinTemplate>();
         networkParams = coin.GetNetwork(network.ChainName);
         txVersion = coin.CoinbaseTxVersion;
         this.network = network;
@@ -630,31 +632,35 @@ public class HandshakeJob
             blockTargetValue = tmp.ToUInt256();
         }
 
-        previousBlockHashReversedHex = BlockTemplate.PreviousBlockhash
-            .HexToByteArray()
-            .ReverseByteOrder()
-            .ToHexString();
+       // previousBlockHashReversedHex = BlockTemplate.PreviousBlockhash
+       //     .HexToByteArray()
+       //     .ReverseByteOrder()
+       //     .ToHexString();
 
         BuildMerkleBranches();
         BuildCoinbase();
 
+        //int value = Convert.ToInt32("00000003");
+        uint num = uint.Parse("00000003", System.Globalization.NumberStyles.AllowHexSpecifier);
+        uint num2 = uint.Parse("20000000", System.Globalization.NumberStyles.AllowHexSpecifier);
+        // var s = uint.Parse("00000003")
+
         jobParams = new object[]
         {
             JobId,
-            previousBlockHashReversedHex,
-            coinbaseInitialHex,
-            coinbaseFinalHex,
-            merkleBranchesHex,
-            BlockTemplate.Version.ToStringHex8(),
-            BlockTemplate.Bits,
-            BlockTemplate.CurTime.ToStringHex8(),
-            false
+            "000000000000000095fd7401c2a1c757c53d0cdd58976a12c36a3e2086262d50", //BlockTemplate.PreviousBlockhash,
+            "1998be40cc7953aa33f36183ae3836ebae9b570cc9203772eb5b304c3c51eaef", //coinbaseInitialHex,
+            "038a0dfc45f34a2c6aa130f05cdf4d55c11daefeee1db73038f173699aca3337", //coinbaseFinalHex,
+            "9ea1742c982e1b20127b0a0d7a612d05d5325fdf5c7b55c050c436852432c76f", //blockTemplate.TreeRoot,
+            "0000000000000000000000000000000000000000000000000000000000000000", //blockTemplate.ReservedRoot,
+            "00000003", //BlockTemplate.Version.ToStringHex8(),
+            "19096415", //BlockTemplate.Bits,
+            "64fc7cb0"
         };
     }
-
     public object GetJobParams(bool isNew)
     {
-        jobParams[^1] = isNew;
+        // jobParams[^1] = isNew;
         return jobParams;
     }
 

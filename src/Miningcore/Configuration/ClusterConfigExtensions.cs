@@ -188,6 +188,65 @@ public partial class ErgoCoinTemplate
     #endregion
 }
 
+public partial class HandshakeCoinTemplate
+{
+    public HandshakeCoinTemplate()
+    {
+        coinbaseHasherValue = new Lazy<IHashAlgorithm>(() =>
+            HashAlgorithmFactory.GetHash(ComponentContext, CoinbaseHasher));
+
+        headerHasherValue = new Lazy<IHashAlgorithm>(() =>
+            HashAlgorithmFactory.GetHash(ComponentContext, HeaderHasher));
+
+        blockHasherValue = new Lazy<IHashAlgorithm>(() =>
+            HashAlgorithmFactory.GetHash(ComponentContext, BlockHasher));
+
+        posBlockHasherValue = new Lazy<IHashAlgorithm>(() =>
+            HashAlgorithmFactory.GetHash(ComponentContext, PoSBlockHasher));
+    }
+
+    private readonly Lazy<IHashAlgorithm> coinbaseHasherValue;
+    private readonly Lazy<IHashAlgorithm> headerHasherValue;
+    private readonly Lazy<IHashAlgorithm> blockHasherValue;
+    private readonly Lazy<IHashAlgorithm> posBlockHasherValue;
+
+    public IComponentContext ComponentContext { get; [UsedImplicitly] init; }
+
+    public IHashAlgorithm CoinbaseHasherValue => coinbaseHasherValue.Value;
+    public IHashAlgorithm HeaderHasherValue => headerHasherValue.Value;
+    public IHashAlgorithm BlockHasherValue => blockHasherValue.Value;
+    public IHashAlgorithm PoSBlockHasherValue => posBlockHasherValue.Value;
+
+    public HandshakeNetworkParams GetNetwork(ChainName chain)
+    {
+        if(Networks == null || Networks.Count == 0)
+            return null;
+
+        if(chain == ChainName.Mainnet)
+            return Networks["main"];
+        else if(chain == ChainName.Testnet)
+            return Networks["test"];
+        else if(chain == ChainName.Regtest)
+            return Networks["regtest"];
+
+        throw new NotSupportedException("unsupported network type");
+    }
+
+    #region Overrides of CoinTemplate
+
+    public override string GetAlgorithmName()
+    {
+        var hash = HeaderHasherValue;
+
+        if(hash.GetType() == typeof(DigestReverser))
+            return ((DigestReverser) hash).Upstream.GetType().Name;
+
+        return hash.GetType().Name;
+    }
+
+    #endregion
+}
+
 public partial class PoolConfig
 {
     /// <summary>
