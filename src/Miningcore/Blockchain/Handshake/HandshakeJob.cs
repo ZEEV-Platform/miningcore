@@ -5,6 +5,7 @@ using Miningcore.Blockchain.Handshake.Configuration;
 using Miningcore.Blockchain.Handshake.DaemonResponses;
 using Miningcore.Configuration;
 using Miningcore.Crypto;
+using Miningcore.Crypto.Hashing.Handshake;
 using Miningcore.Extensions;
 using Miningcore.Stratum;
 using Miningcore.Time;
@@ -323,7 +324,7 @@ public class HandshakeJob
         // hash block-header
         var headerBytes = SerializeHeader(coinbaseHash, nTime, nonce, context.VersionRollingMask, versionBits);
         Span<byte> headerHash = stackalloc byte[32];
-        headerHasher.Digest(headerBytes, headerHash, (ulong) nTime, BlockTemplate, coin, networkParams);
+        ((HandShake)headerHasher).Digest(headerBytes, out headerHash, (ulong) nTime, BlockTemplate, coin, networkParams);
         var headerValue = new uint256(headerHash);
 
         // calc share-diff
@@ -365,7 +366,7 @@ public class HandshakeJob
             result.IsBlockCandidate = true;
 
             Span<byte> blockHash = stackalloc byte[32];
-            blockHasher.Digest(headerBytes, blockHash, nTime);
+            ((HandShake)blockHasher).Digest(headerBytes, out blockHash, nTime);
             result.BlockHash = blockHash.ToHexString();
 
             var blockBytes = SerializeBlock(headerBytes, coinbase);
@@ -648,14 +649,14 @@ public class HandshakeJob
         jobParams = new object[]
         {
             JobId,
-            "000000000000000095fd7401c2a1c757c53d0cdd58976a12c36a3e2086262d50", //BlockTemplate.PreviousBlockhash,
-            "1998be40cc7953aa33f36183ae3836ebae9b570cc9203772eb5b304c3c51eaef", //coinbaseInitialHex,
-            "038a0dfc45f34a2c6aa130f05cdf4d55c11daefeee1db73038f173699aca3337", //coinbaseFinalHex,
-            "9ea1742c982e1b20127b0a0d7a612d05d5325fdf5c7b55c050c436852432c76f", //blockTemplate.TreeRoot,
-            "0000000000000000000000000000000000000000000000000000000000000000", //blockTemplate.ReservedRoot,
-            "00000003", //BlockTemplate.Version.ToStringHex8(),
-            "19096415", //BlockTemplate.Bits,
-            "64fc7cb0"
+            BlockTemplate.PreviousBlockhash,
+            coinbaseInitialHex,
+            coinbaseFinalHex,
+            blockTemplate.TreeRoot,
+            blockTemplate.ReservedRoot,
+            BlockTemplate.Version.ToStringHex8(),
+            BlockTemplate.Bits,
+            BlockTemplate.CurTime.ToStringHex8()
         };
     }
     public object GetJobParams(bool isNew)
