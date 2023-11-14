@@ -36,8 +36,8 @@ public class ShareRepository : IShareRepository
 
                 await writer.WriteAsync(share.PoolId, ct);
                 await writer.WriteAsync((long) share.BlockHeight, NpgsqlDbType.Bigint, ct);
-                await writer.WriteAsync(share.Difficulty, NpgsqlDbType.Double, ct);
-                await writer.WriteAsync(share.NetworkDifficulty, NpgsqlDbType.Double, ct);
+                await writer.WriteAsync(share.Difficulty, NpgsqlDbType.Numeric, ct);
+                await writer.WriteAsync(share.NetworkDifficulty, NpgsqlDbType.Numeric, ct);
                 await writer.WriteAsync(share.Miner, ct);
                 await writer.WriteAsync(share.Worker, ct);
                 await writer.WriteAsync(share.UserAgent, ct);
@@ -77,7 +77,7 @@ public class ShareRepository : IShareRepository
 
     public Task<double?> GetEffortBetweenCreatedAsync(IDbConnection con, string poolId, double shareConst, DateTime start, DateTime end)
     {
-        const string query = "SELECT SUM((difficulty * @shareConst) / networkdifficulty) FROM shares WHERE poolid = @poolId AND created > @start AND created < @end";
+        const string query = "SELECT SUM((difficulty * @shareConst) / networkdifficulty) FROM shares WHERE poolid = @poolId AND created > @start";
 
         return con.QuerySingleAsync<double?>(query, new { poolId, shareConst, start, end });
     }
