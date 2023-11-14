@@ -304,7 +304,11 @@ public class HandshakeJob
             HashPrevBlock = uint256.Parse(BlockTemplate.PreviousBlockhash),
             HashMerkleRoot = new uint256(merkleRoot),
             BlockTime = DateTimeOffset.FromUnixTimeSeconds(nTime),
-            Nonce = nonce
+            Nonce = nonce,
+            HashCommitHash = new uint256(),
+            HashReservedRoot = new uint256(),
+            HashTreeRoot = new uint256(),
+            HashWitnessRoot = new uint256()
         };
 
         return blockHeader.ToBytes();
@@ -364,10 +368,7 @@ public class HandshakeJob
         if(isBlockCandidate)
         {
             result.IsBlockCandidate = true;
-
-            Span<byte> blockHash = stackalloc byte[32];
-            ((HandShake)blockHasher).Digest(headerBytes, out blockHash, nTime);
-            result.BlockHash = blockHash.ToHexString();
+            result.BlockHash = new uint256(headerHash).ToString();
 
             var blockBytes = SerializeBlock(headerBytes, coinbase);
             var blockHex = blockBytes.ToHexString();
