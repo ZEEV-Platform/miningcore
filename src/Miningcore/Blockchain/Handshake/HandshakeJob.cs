@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Numerics;
 using System.Text;
 using Miningcore.Blockchain.Handshake.Configuration;
 using Miningcore.Blockchain.Handshake.DaemonResponses;
@@ -283,11 +284,24 @@ public class HandshakeJob
         return submissions.TryAdd(key, true);
     }
 
-    protected byte[] SerializeHeader(Span<byte> coinbaseHash, uint nTime, uint nonce, uint? versionMask, uint? versionBits)
+    protected HandshakeBlockHeader SerializeHeader(Span<byte> coinbaseHash, uint nTime, uint nonce, byte[] extraNonce2, uint? versionMask, uint? versionBits)
     {
+        var headerHex2 = "a6496be42fe1b065000000000000000000000005b4490d1678b73c066ed15b6cbe0e98f684612504ffa4f97e34059276d78aa47040ba328b408416b61c80ac212681e1948ac2622705af27f301fcaf2eb1143da20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ffd4f0144d43f2d8bb5d0da049911c392ea51e8463c5e74c2ae51b70d3016f6ae037061a67848020dee27740f93d8f9a937a1912be6068e77adb85eb43cd43d000000005a6407190000000000000000000000000000000000000000000000000000000000000000";
+        var header = Enumerable.Range(0, headerHex2.Length)
+             .Where(x => x % 2 == 0)
+             .Select(x => Convert.ToByte(headerHex2.Substring(x, 2), 16))
+             .ToArray();
+
+        var test = new HandshakeBlockHeader(headerHex2);
+        //var testBytes = test.ToBytes();
+        //var testBytesMiner = test.ToMiner();
+        //var testHex = Encoders.Hex.EncodeData(testBytes);
+        //var testHexMiner = Encoders.Hex.EncodeData(testBytesMiner);
+
         // build merkle-root
         var merkleRoot = mt.WithFirst(coinbaseHash.ToArray());
 
+        //    return test;
         // Build version
         var version = BlockTemplate.Version;
 
@@ -308,10 +322,32 @@ public class HandshakeJob
             HashCommitHash = new uint256(),
             HashReservedRoot = new uint256(),
             HashTreeRoot = new uint256(),
-            HashWitnessRoot = new uint256()
+            HashWitnessRoot = new uint256(),
+            ExtraNonce = extraNonce2
+            //Version = test.Version,
+            //Bits = test.Bits,
+            //HashPrevBlock = test.HashPrevBlock,
+            //HashMerkleRoot = test.HashMerkleRoot,
+            //BlockTime = test.BlockTime,
+            //Nonce = test.Nonce,
+            //HashCommitHash = test.HashCommitHash,
+            //HashReservedRoot = test.HashReservedRoot,
+            //HashTreeRoot = test.HashTreeRoot,
+            //HashWitnessRoot = test.HashWitnessRoot,
+            //ExtraNonce = test.ExtraNonce
         };
 
-        return blockHeader.ToBytes();
+        var testBytes = test.ToBytes();
+        var blockBytes = blockHeader.ToBytes();
+
+        var testBytesHex = Encoders.Hex.EncodeData(testBytes);
+        var blockBytesHex = Encoders.Hex.EncodeData(blockBytes);
+
+        //var testBytesMiner = test.ToMiner();
+        //var testHex = Encoders.Hex.EncodeData(testBytes);
+        //var testHexMiner = Encoders.Hex.EncodeData(testBytesMiner);
+
+        return blockHeader;
     }
 
     protected virtual (Share Share, string BlockHex) ProcessShareInternal(
@@ -326,16 +362,21 @@ public class HandshakeJob
         coinbaseHasher.Digest(coinbase, coinbaseHash);
 
         // hash block-header
-        var headerBytes = SerializeHeader(coinbaseHash, nTime, nonce, context.VersionRollingMask, versionBits);
+        var header = SerializeHeader(coinbaseHash, nTime, nonce, extraNonce2.HexToByteArray(), context.VersionRollingMask, versionBits);
+        var headerBytesMiner = header.ToMiner();
         Span<byte> headerHash = stackalloc byte[32];
-        ((HandShake)headerHasher).Digest(headerBytes, out headerHash, (ulong) nTime, BlockTemplate, coin, networkParams);
+        ((HandShake)headerHasher).Digest(headerBytesMiner, out headerHash, (ulong) nTime, BlockTemplate, coin, networkParams);
         var headerValue = new uint256(headerHash);
 
         // calc share-diff
-        var shareDiff = (double) new BigRational(HandshakeConstants.Diff1, headerHash.ToBigInteger()) * shareMultiplier;
+        var shareDiff = (double)GetDifficulty(header.Bits);
+        var shareDiff2 = (double) new BigRational(HandshakeConstants.Diff1, headerHash.ToBigInteger()) * shareMultiplier;
         var stratumDifficulty = context.Difficulty;
-        var ratio = shareDiff / stratumDifficulty;
+        var ratio = shareDiff2 / stratumDifficulty;
 
+        var xx = headerHash.ToBigInteger();
+        var xxx = BigInteger.Parse("00ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
+        var x = new BigInteger(blockTargetValue.ToBytes());
         // check if the share meets the much harder block difficulty (block candidate)
         var isBlockCandidate = headerValue <= blockTargetValue;
 
@@ -368,8 +409,9 @@ public class HandshakeJob
         if(isBlockCandidate)
         {
             result.IsBlockCandidate = true;
-            result.BlockHash = new uint256(headerHash).ToString();
+            result.BlockHash = headerValue.ToString();
 
+            var headerBytes = header.ToBytes();
             var blockBytes = SerializeBlock(headerBytes, coinbase);
             var blockHex = blockBytes.ToHexString();
 
@@ -710,4 +752,56 @@ public class HandshakeJob
     }
 
     #endregion // API-Surface
+
+    private static uint ToUInt32BigEndian(byte[] bytes, int startIndex)
+    {
+        if(BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(bytes, startIndex, 4);
+        }
+
+        return BitConverter.ToUInt32(bytes, startIndex);
+    }
+
+    public static BigInteger Double256(byte[] target)
+    {
+        if(target.Length != 32)
+        {
+            throw new ArgumentException("Target length must be 32 bytes");
+        }
+
+        BigInteger n = 0;
+        BigInteger hi, lo;
+
+
+        hi = ToUInt32BigEndian(target, 0);
+        lo = ToUInt32BigEndian(target, 4);
+        n += (hi * 0x100000000 + 7) * BigInteger.Parse("1000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
+
+        hi = ToUInt32BigEndian(target, 8);
+        lo = ToUInt32BigEndian(target, 12);
+        n += (hi * 0x100000000 + lo) * BigInteger.Parse("100000000000000000000000000000000", NumberStyles.HexNumber);
+
+        hi = ToUInt32BigEndian(target, 16);
+        lo = ToUInt32BigEndian(target, 20);
+        n += (hi * 0x100000000 + lo) * BigInteger.Parse("10000000000000000", NumberStyles.HexNumber);
+
+        hi = ToUInt32BigEndian(target, 24);
+        lo = ToUInt32BigEndian(target, 28);
+        n += (hi * 0x100000000 + lo) * BigInteger.Parse("1", NumberStyles.HexNumber);
+
+        return n;
+    }
+
+    public static BigInteger GetDifficulty(Target target)
+    {
+        var d = BigInteger.Parse("00000000ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
+        var targetBytes = target.ToUInt256().ToBytes(false);
+        var n = Double256(targetBytes);
+
+        if(n == 0)
+            return d;
+
+        return BigInteger.Divide(d, n);
+    }
 }
