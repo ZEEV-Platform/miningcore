@@ -354,11 +354,12 @@ public class HandshakeJob
         coinbaseHasher.Digest(coinbase, coinbaseHash);
 
         // hash block-header
-        var header = SerializeHeader(coinbaseHash, nTime, nonce, extraNonce2.HexToByteArray(), context.VersionRollingMask, versionBits);
+        var header = SerializeHeader(coinbaseHash, nTime, nonce, (extraNonce1 + extraNonce2).HexToByteArray(), context.VersionRollingMask, versionBits);
         var headerBytesMiner = header.ToMiner();
 
         var headerBytesX = header.ToBytes();
         var headerBytesHex = Encoders.Hex.EncodeData(headerBytesX);
+        var headerBytesMinerHex = Encoders.Hex.EncodeData(headerBytesMiner);
         Span<byte> headerHash = stackalloc byte[32];
         ((HandShake)headerHasher).Digest(headerBytesMiner, out headerHash, (ulong) nTime, BlockTemplate, coin, networkParams);
         var headerValue = new uint256(headerHash);
@@ -366,8 +367,9 @@ public class HandshakeJob
         // calc share-diff
         var shareDiff = (double)GetDifficulty(header.Bits);
         var shareDiff2 = (double) new BigRational(HandshakeConstants.Diff1, headerHash.ToBigInteger()) * shareMultiplier;
+        var shareDiff3 = (double) GetDifficulty(new Target(headerHash.ToBigInteger()));
         var stratumDifficulty = context.Difficulty;
-        var ratio = shareDiff2 / stratumDifficulty;
+        var ratio = shareDiff3 / stratumDifficulty;
 
         var xx = headerHash.ToBigInteger();
         var xxx = BigInteger.Parse("00ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
@@ -771,7 +773,7 @@ public class HandshakeJob
 
         hi = ToUInt32BigEndian(target, 0);
         lo = ToUInt32BigEndian(target, 4);
-        n += (hi * 0x100000000 + 7) * BigInteger.Parse("1000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
+        n += (hi * 0x100000000 + lo) * BigInteger.Parse("1000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
 
         hi = ToUInt32BigEndian(target, 8);
         lo = ToUInt32BigEndian(target, 12);
@@ -791,7 +793,7 @@ public class HandshakeJob
     public static BigInteger GetDifficulty(Target target)
     {
         var d = BigInteger.Parse("00000000ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
-        var targetBytes = target.ToUInt256().ToBytes(false);
+        var targetBytes = target.ToUInt256().ToBytes();
         var n = Double256(targetBytes);
 
         if(n == 0)
