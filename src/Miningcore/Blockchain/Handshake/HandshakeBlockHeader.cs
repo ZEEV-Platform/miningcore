@@ -22,29 +22,89 @@ namespace Miningcore.Blockchain.Handshake
             SetNull();
         }
 
+        private byte[] hashMerkleRootBytes = new byte[32];
         private uint256 hashMerkleRoot;
+        public uint256 HashMerkleRoot
+        {
+            get { return this.hashMerkleRoot; }
+            set
+            {
+                this.hashMerkleRoot = value;
+                this.hashMerkleRootBytes = value.ToBytes(false);
+            }
+        }
+
+        private byte[] hashPrevBlockBytes = new byte[32];
         private uint256 hashPrevBlock;
-        private uint256 hashReservedRoot;
+        public uint256 HashPrevBlock
+        {
+            get { return this.hashPrevBlock; }
+            set
+            {
+                this.hashPrevBlock = value;
+                this.hashPrevBlockBytes = value.ToBytes(false);
+            }
+        }
+
+        private byte[] hashTreeRootBytes = new byte[32];
         private uint256 hashTreeRoot;
-        private uint256 hashCommitHash;
+        public uint256 HashTreeRoot
+        {
+            get { return this.hashTreeRoot; }
+            set
+            {
+                this.hashTreeRoot = value;
+                this.hashTreeRootBytes = value.ToBytes(false);
+            }
+        }
+
+        private byte[] hashReservedRootBytes = new byte[32];
+        private uint256 hashReservedRoot;
+        public uint256 HashReservedRoot
+        {
+            get { return this.hashReservedRoot; }
+            set
+            {
+                this.hashReservedRoot = value;
+                this.hashReservedRootBytes = value.ToBytes(false);
+            }
+        }
+
+        private byte[] hashWitnessRootBytes = new byte[32];
         private uint256 hashWitnessRoot;
+        public uint256 HashWitnessRoot
+        {
+            get { return this.hashWitnessRoot; }
+            set
+            {
+                this.hashWitnessRoot = value;
+                this.hashWitnessRootBytes = value.ToBytes(false);
+            }
+        }
+
+        private byte[] hashMaskBytes = new byte[32];
         private uint256 hashMask;
+        public uint256 HashMask
+        {
+            get { return this.hashMask; }
+            set
+            {
+                this.hashMask = value;
+                this.hashMaskBytes = value.ToBytes(false);
+            }
+        }
+
+        private byte[] hashCommitHashBytes = new byte[32];
         private uint nBits;
         private uint nNonce;
         private uint nTime;
         private int nVersion;
-        private byte[] extraNonce = new byte[24];
+        private byte[] extraNonceBytes = new byte[24];
         private byte[] paddingBytes = new byte[20];
         private byte[] timeBytes = new byte[8];
 
         // header
         private const int CURRENT_VERSION = 1;
-
-        public uint256 HashPrevBlock
-        {
-            get => hashPrevBlock;
-            set => hashPrevBlock = value;
-        }
 
         public Target Bits
         {
@@ -64,46 +124,10 @@ namespace Miningcore.Blockchain.Handshake
             set => nNonce = value;
         }
 
-        public uint256 HashMerkleRoot
-        {
-            get => hashMerkleRoot;
-            set => hashMerkleRoot = value;
-        }
-
-        public uint256 HashReservedRoot
-        {
-            get => hashReservedRoot;
-            set => hashReservedRoot = value;
-        }
-
-        public uint256 HashTreeRoot
-        {
-            get => hashTreeRoot;
-            set => hashTreeRoot = value;
-        }
-
-        public uint256 HashWitnessRoot
-        {
-            get => hashWitnessRoot;
-            set => hashWitnessRoot = value;
-        }
-
-        public uint256 HashCommitHash
-        {
-            get => hashCommitHash;
-            set => hashCommitHash = value;
-        }
-
-        public uint256 HashMask
-        {
-            get => hashMask;
-            set => hashMask = value;
-        }
-
         public byte[] ExtraNonce
         {
-            get { return extraNonce; }
-            set { extraNonce = value; }
+            get { return extraNonceBytes; }
+            set { extraNonceBytes = value; }
         }
         public bool IsNull => nBits == 0;
 
@@ -134,10 +158,11 @@ namespace Miningcore.Blockchain.Handshake
             {
                 var stream = new BitcoinStream(ms, true);
 
-                stream.ReadWrite(ref extraNonce);
-                stream.ReadWrite(ref hashReservedRoot);
-                stream.ReadWrite(ref hashWitnessRoot);
-                stream.ReadWrite(ref hashMerkleRoot);
+                ReadWriteBytes(stream, ref extraNonceBytes);
+                ReadWriteBytes(stream, ref hashReservedRootBytes);
+                ReadWriteBytes(stream, ref hashWitnessRootBytes);
+                ReadWriteBytes(stream, ref hashMerkleRootBytes);
+
                 stream.ReadWrite(ref nVersion);
 
                 //    stream.IsBigEndian = true;
@@ -189,19 +214,21 @@ namespace Miningcore.Blockchain.Handshake
                 timeBytes = BitConverter.GetBytes(longTime);
                 ReadWriteBytes(stream, ref timeBytes);
 
-                paddingBytes = padding(20, hashPrevBlock.ToBytes(), hashTreeRoot.ToBytes());
+                paddingBytes = padding(20, hashPrevBlockBytes, hashTreeRootBytes);
                 ReadWriteBytes(stream, ref paddingBytes);
 
-                stream.ReadWrite(ref hashPrevBlock);
-                stream.ReadWrite(ref hashTreeRoot);
+                ReadWriteBytes(stream, ref hashPrevBlockBytes);
+                ReadWriteBytes(stream, ref hashTreeRootBytes);
 
-                hashCommitHash = new uint256(commitHash(hashPrevBlock.ToBytes()));
-                stream.ReadWrite(ref hashCommitHash);
+                hashCommitHashBytes = commitHash(hashPrevBlockBytes);
+                ReadWriteBytes(stream, ref hashCommitHashBytes);
 
-                ReadWriteBytes(stream, ref extraNonce);
-                stream.ReadWrite(ref hashReservedRoot);
-                stream.ReadWrite(ref hashWitnessRoot);
-                stream.ReadWrite(ref hashMerkleRoot);
+                ReadWriteBytes(stream, ref extraNonceBytes);
+
+                ReadWriteBytes(stream, ref hashReservedRootBytes);
+                ReadWriteBytes(stream, ref hashWitnessRootBytes);
+                ReadWriteBytes(stream, ref hashMerkleRootBytes);
+
                 stream.ReadWrite(ref nVersion);
                 stream.ReadWrite(ref nBits);
 
@@ -221,43 +248,61 @@ namespace Miningcore.Blockchain.Handshake
                 timeBytes = BitConverter.GetBytes(longTime);
                 ReadWriteBytes(stream, ref timeBytes);
 
-               // paddingBytes = padding(20, hashPrevBlock.ToBytes(), hashTreeRoot.ToBytes());
-                //ReadWriteBytes(stream, ref paddingBytes);
+                ReadWriteBytes(stream, ref hashPrevBlockBytes);
+                ReadWriteBytes(stream, ref hashTreeRootBytes);
+                ReadWriteBytes(stream, ref extraNonceBytes);
+                ReadWriteBytes(stream, ref hashReservedRootBytes);
+                ReadWriteBytes(stream, ref hashWitnessRootBytes);
+                ReadWriteBytes(stream, ref hashMerkleRootBytes);
 
-                stream.ReadWrite(ref hashPrevBlock);
-                stream.ReadWrite(ref hashTreeRoot);
+                //stream.ReadWrite(ref hashPrevBlock);
+                //stream.ReadWrite(ref hashTreeRoot);
 
-              //  hashCommitHash = new uint256(commitHash(hashPrevBlock.ToBytes()));
-              //  stream.ReadWrite(ref hashCommitHash);
+                //ReadWriteBytes(stream, ref extraNonceBytes);
 
-                ReadWriteBytes(stream, ref extraNonce);
-                stream.ReadWrite(ref hashReservedRoot);
-                stream.ReadWrite(ref hashWitnessRoot);
-                stream.ReadWrite(ref hashMerkleRoot);
+                //stream.ReadWrite(ref hashReservedRoot);
+                //ReadWriteBytes(stream, ref hashWitnessRootBytes);
+                //stream.ReadWrite(ref hashMerkleRoot);
+
                 stream.ReadWrite(ref nVersion);
                 stream.ReadWrite(ref nBits);
 
-                stream.ReadWrite(ref hashMask);
+                ReadWriteBytes(stream, ref hashMaskBytes);
             }
             else
             {
                 ReadWriteBytes(stream, ref timeBytes);
                 nTime = (uint) BitConverter.ToUInt64(timeBytes, 0);
 
-               // ReadWriteBytes(stream, ref paddingBytes);
-                stream.ReadWrite(ref hashPrevBlock);
-                stream.ReadWrite(ref hashTreeRoot);
-            //    stream.ReadWrite(ref hashCommitHash);
+                ReadWriteBytes(stream, ref hashPrevBlockBytes);
+                hashPrevBlock = Uint256String(ref hashPrevBlockBytes);
 
-                ReadWriteBytes(stream, ref extraNonce);
-                stream.ReadWrite(ref hashReservedRoot);
-                stream.ReadWrite(ref hashWitnessRoot);
-                stream.ReadWrite(ref hashMerkleRoot);
+                ReadWriteBytes(stream, ref hashTreeRootBytes);
+                hashTreeRoot = Uint256String(ref hashTreeRootBytes);
+
+                ReadWriteBytes(stream, ref extraNonceBytes);
+
+                ReadWriteBytes(stream, ref hashReservedRootBytes);
+                hashReservedRoot = Uint256String(ref hashReservedRootBytes);
+
+                ReadWriteBytes(stream, ref hashWitnessRootBytes);
+                hashWitnessRoot = Uint256String(ref hashWitnessRootBytes);
+
+                ReadWriteBytes(stream, ref hashMerkleRootBytes);
+                hashMerkleRoot = Uint256String(ref hashMerkleRootBytes);
+
                 stream.ReadWrite(ref nVersion);
                 stream.ReadWrite(ref nBits);
 
-                stream.ReadWrite(ref hashMask);
+                ReadWriteBytes(stream, ref hashMaskBytes);
+                hashMask = Uint256String(ref hashMaskBytes);
             }
+        }
+
+        private uint256 Uint256String(ref byte[] buffer)
+        {
+            string bufferString = BitConverter.ToString(buffer).Replace("-", string.Empty);
+            return new uint256(bufferString);
         }
 
         #endregion
@@ -274,7 +319,7 @@ namespace Miningcore.Blockchain.Handshake
             hashMerkleRoot = 0;
             hashReservedRoot = 0;
             hashTreeRoot = 0;
-            hashCommitHash = 0;
+            hashCommitHashBytes = new byte[32];
             hashWitnessRoot = 0;
             hashMask = 0;
             nTime = 0;

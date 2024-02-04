@@ -14,6 +14,7 @@ using Miningcore.Util;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Utilities;
 using Contract = Miningcore.Contracts.Contract;
 using Transaction = NBitcoin.Transaction;
 
@@ -309,6 +310,8 @@ public class HandshakeJob
         if(versionMask.HasValue && versionBits.HasValue)
             version = (version & ~versionMask.Value) | (versionBits.Value & versionMask.Value);
 
+        Array.Resize(ref extraNonce2, 24);
+
 #pragma warning disable 618
         var blockHeader = new HandshakeBlockHeader
 #pragma warning restore 618
@@ -319,22 +322,11 @@ public class HandshakeJob
             HashMerkleRoot = new uint256(merkleRoot),
             BlockTime = DateTimeOffset.FromUnixTimeSeconds(nTime),
             Nonce = nonce,
-            HashCommitHash = new uint256(),
             HashReservedRoot = new uint256(),
             HashTreeRoot = new uint256(),
             HashWitnessRoot = new uint256(),
+            HashMask = new uint256(),
             ExtraNonce = extraNonce2
-            //Version = test.Version,
-            //Bits = test.Bits,
-            //HashPrevBlock = test.HashPrevBlock,
-            //HashMerkleRoot = test.HashMerkleRoot,
-            //BlockTime = test.BlockTime,
-            //Nonce = test.Nonce,
-            //HashCommitHash = test.HashCommitHash,
-            //HashReservedRoot = test.HashReservedRoot,
-            //HashTreeRoot = test.HashTreeRoot,
-            //HashWitnessRoot = test.HashWitnessRoot,
-            //ExtraNonce = test.ExtraNonce
         };
 
         var testBytes = test.ToBytes();
@@ -364,6 +356,9 @@ public class HandshakeJob
         // hash block-header
         var header = SerializeHeader(coinbaseHash, nTime, nonce, extraNonce2.HexToByteArray(), context.VersionRollingMask, versionBits);
         var headerBytesMiner = header.ToMiner();
+
+        var headerBytesX = header.ToBytes();
+        var headerBytesHex = Encoders.Hex.EncodeData(headerBytesX);
         Span<byte> headerHash = stackalloc byte[32];
         ((HandShake)headerHasher).Digest(headerBytesMiner, out headerHash, (ulong) nTime, BlockTemplate, coin, networkParams);
         var headerValue = new uint256(headerHash);
