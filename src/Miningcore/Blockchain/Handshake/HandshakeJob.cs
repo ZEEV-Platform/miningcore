@@ -361,21 +361,50 @@ public class HandshakeJob
         var headerBytesHex = Encoders.Hex.EncodeData(headerBytesX);
         var headerBytesMinerHex = Encoders.Hex.EncodeData(headerBytesMiner);
         Span<byte> headerHash = stackalloc byte[32];
-        ((HandShake)headerHasher).Digest(headerBytesMiner, out headerHash, (ulong) nTime, BlockTemplate, coin, networkParams);
+        ((HandShake) headerHasher).Digest(headerBytesMiner, out headerHash, (ulong) nTime, BlockTemplate, coin, networkParams);
         var headerValue = new uint256(headerHash);
 
         // calc share-diff
-        var shareDiff = (double)GetDifficulty(header.Bits);
+        var shareDiff = (double) new BigRational(HandshakeConstants.Diff1, GetDifficulty(header.Bits)) * shareMultiplier;
         var shareDiff2 = (double) new BigRational(HandshakeConstants.Diff1, headerHash.ToBigInteger()) * shareMultiplier;
-        var shareDiff3 = (double) GetDifficulty(new Target(headerHash.ToBigInteger()));
-        var stratumDifficulty = context.Difficulty;
-        var ratio = shareDiff3 / stratumDifficulty;
+        var shareDiff3 = (double) new BigRational(HandshakeConstants.Diff1, GetDifficulty(new Target(headerHash.ToBigInteger()))) * shareMultiplier;
+        headerHash.Reverse();
+        var shareDiffRev2 = (double) new BigRational(HandshakeConstants.Diff1, headerHash.ToBigInteger()) * shareMultiplier;
+        var shareDiffRev3 = (double) new BigRational(HandshakeConstants.Diff1, GetDifficulty(new Target(headerHash.ToBigInteger()))) * shareMultiplier;
 
-        var xx = headerHash.ToBigInteger();
-        var xxx = BigInteger.Parse("00ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
-        var x = new BigInteger(blockTargetValue.ToBytes());
+        var stratumDifficulty = context.Difficulty;
+        var ratio = shareDiff / stratumDifficulty;
+        var ratio2 = shareDiff2 / stratumDifficulty;
+        var ratio3 = shareDiff3 / stratumDifficulty;
+
+        //var xx = headerHash.ToBigInteger();
+        //var xxx = BigInteger.Parse("00ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
+        //var x = new BigInteger(blockTargetValue.ToBytes());
+        var blockTargetValueReversed = new uint256(blockTargetValue.ToBytes().Reverse().ToArray());
         // check if the share meets the much harder block difficulty (block candidate)
+
+        try
+        {
+            var targetHeader = new Target(headerValue);
+            var targetBlockTargetValue = new Target(blockTargetValue);
+            var targetBlockTargetValueReversed = new Target(blockTargetValueReversed);
+        }
+        catch(Exception)
+        {
+
+            throw;
+        }
         var isBlockCandidate = headerValue <= blockTargetValue;
+        if (isBlockCandidate)
+        {
+            var isCandidate = true;
+        }
+
+        isBlockCandidate = headerValue <= blockTargetValueReversed;
+        if(isBlockCandidate)
+        {
+            var isCandidate = true;
+        }
 
         // test if share meets at least workers current difficulty
         if(!isBlockCandidate && ratio < 0.99)
@@ -665,18 +694,29 @@ public class HandshakeJob
         this.headerHasher = headerHasher;
         this.blockHasher = blockHasher;
 
-        if(!string.IsNullOrEmpty(BlockTemplate.Target))
-            blockTargetValue = new uint256(BlockTemplate.Target);
-        else
-        {
-            var tmp = new Target(BlockTemplate.Bits.HexToByteArray());
-            blockTargetValue = tmp.ToUInt256();
-        }
+        var bitsBytes = BlockTemplate.Bits.HexToByteArray();
+        // Array.Reverse(bitsBytes);
+        var target = new Target(bitsBytes);
+        blockTargetValue = new uint256(target);
+        BlockTemplate.Target = blockTargetValue.ToString();
 
-       // previousBlockHashReversedHex = BlockTemplate.PreviousBlockhash
-       //     .HexToByteArray()
-       //     .ReverseByteOrder()
-       //     .ToHexString();
+        //string[] chunks = new string[8];
+        //for(int i = 0; i < 8; i++)
+        //{
+        //    chunks[i] = BlockTemplate.PreviousBlockhash.Substring(i * 8, 8);
+        //}
+        //Array.Reverse(chunks);
+        //previousBlockHashReversedHex = string.Concat(chunks);
+
+        //reverse total
+        byte[] byteArray = new byte[BlockTemplate.PreviousBlockhash.Length / 2];
+        for(int i = 0; i < byteArray.Length; i++)
+        {
+            byteArray[i] = Convert.ToByte(BlockTemplate.PreviousBlockhash.Substring(i * 2, 2), 16);
+        }
+        Array.Reverse(byteArray);
+        previousBlockHashReversedHex = BitConverter.ToString(byteArray).Replace("-", "").ToLower();
+
 
         BuildMerkleBranches();
         BuildCoinbase();
@@ -689,13 +729,13 @@ public class HandshakeJob
         jobParams = new object[]
         {
             JobId,
-            BlockTemplate.PreviousBlockhash,
+            previousBlockHashReversedHex,
             coinbaseInitialHex,
             coinbaseFinalHex,
-            blockTemplate.TreeRoot,
-            blockTemplate.ReservedRoot,
+            BlockTemplate.TreeRoot,
+            BlockTemplate.ReservedRoot,
             BlockTemplate.Version.ToStringHex8(),
-            BlockTemplate.Bits,
+            bitsBytes.ToHexString(),
             BlockTemplate.CurTime.ToStringHex8()
         };
     }

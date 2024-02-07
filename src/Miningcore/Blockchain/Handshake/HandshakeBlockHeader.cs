@@ -1,7 +1,10 @@
 using Miningcore.Crypto.Hashing.Handshake.Blake2b;
+using Miningcore.Extensions;
 using NBitcoin;
 using NBitcoin.DataEncoders;
+using System.Globalization;
 using System.IO;
+using YamlDotNet.Core.Tokens;
 
 namespace Miningcore.Blockchain.Handshake
 {
@@ -164,15 +167,7 @@ namespace Miningcore.Blockchain.Handshake
                 ReadWriteBytes(stream, ref hashMerkleRootBytes);
 
                 stream.ReadWrite(ref nVersion);
-
-                //    stream.IsBigEndian = true;
                 stream.ReadWrite(ref nBits);
-                //    stream.IsBigEndian = false;
-
-                //var reversedBitBytes = new byte[4];
-                //this.bitsBytes.CopyTo(reversedBitBytes, 0);
-                //Array.Reverse(reversedBitBytes);
-                //stream.ReadWriteBytes(ref reversedBitBytes);
 
                 var bytes = ms.GetBuffer();
                 Array.Resize(ref bytes, (int) ms.Length);
@@ -254,15 +249,6 @@ namespace Miningcore.Blockchain.Handshake
                 ReadWriteBytes(stream, ref hashReservedRootBytes);
                 ReadWriteBytes(stream, ref hashWitnessRootBytes);
                 ReadWriteBytes(stream, ref hashMerkleRootBytes);
-
-                //stream.ReadWrite(ref hashPrevBlock);
-                //stream.ReadWrite(ref hashTreeRoot);
-
-                //ReadWriteBytes(stream, ref extraNonceBytes);
-
-                //stream.ReadWrite(ref hashReservedRoot);
-                //ReadWriteBytes(stream, ref hashWitnessRootBytes);
-                //stream.ReadWrite(ref hashMerkleRoot);
 
                 stream.ReadWrite(ref nVersion);
                 stream.ReadWrite(ref nBits);

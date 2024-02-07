@@ -47,7 +47,7 @@ namespace Miningcore.Tests.Blockchain.HandShake
             headerBlock.HashReservedRoot = headerBlock.HashReservedRoot; //does not affect
             headerBlock.HashMask = headerBlock.HashMask; //does not affect
 
-            //headerBlock.Bits = new Target(h208877.Bits);
+            headerBlock.Bits = headerBlock.Bits;
             //headerBlock.HashTreeRoot = h208877.HashTreeRoot;
             //headerBlock.HashMerkleRoot = h208877.HashMerkleRoot;
             //headerBlock.HashPrevBlock = h208877.HashPrevBlock;
