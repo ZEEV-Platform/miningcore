@@ -6,8 +6,8 @@ CREATE TABLE shares
 (
 	poolid TEXT NOT NULL,
 	blockheight BIGINT NOT NULL,
-	difficulty DOUBLE PRECISION NOT NULL,
-	networkdifficulty DOUBLE PRECISION NOT NULL,
+	difficulty DECIMAL(28,12) NOT NULL,
+	networkdifficulty DECIMAL(28,12) NOT NULL,
 	miner TEXT NOT NULL,
 	worker TEXT NULL,
 	useragent TEXT NULL,
