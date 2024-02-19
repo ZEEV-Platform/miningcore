@@ -462,23 +462,8 @@ public class HandshakeJob
         //testuint
         var uint256hash = new uint256(headerHashRev);
         var uint256hashHex = new uint256(headerValueHex);
-        var uint256hashMyRev = new Miningcore.Crypto.Hashing.Handshake.uint256(headerHashRev);
-        var uint256hashMy = new Miningcore.Crypto.Hashing.Handshake.uint256(headerHash.ToArray());
-        var targetMyRev = new Miningcore.Crypto.Hashing.Handshake.uint256(blockTargetValue.ToBytes().Reverse().ToArray());
-        var targetMy = new Miningcore.Crypto.Hashing.Handshake.uint256(blockTargetValue.ToBytes().ToArray());
         var w2 = new Target(new uint256(headerHashRev));
         var d1 = new Target(new uint256(headerValueHex));
-
-        var isBlockCandidateYY = uint256hashMyRev <= targetMyRev;
-        var isBlockCandidateYYX = uint256hashMy <= targetMyRev;
-        var isBlockCandidateXX = uint256hashMy <= targetMy;
-        var isBlockCandidateXXY = uint256hashMyRev <= targetMy;
-
-        bool atLeastOneTrue = new[] { isBlockCandidateYY, isBlockCandidateYYX, isBlockCandidateXX, isBlockCandidateXXY }.Any();
-        if (atLeastOneTrue)
-        {
-            var isTrue = true;
-        }
         //miner difficult configuration
 
         var shareTargetBits = GetBitsFromDifficult(context.Difficulty);
