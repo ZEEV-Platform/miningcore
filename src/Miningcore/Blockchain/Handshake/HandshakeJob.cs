@@ -23,6 +23,7 @@ using static Org.BouncyCastle.Bcpg.Attr.ImageAttrib;
 using Contract = Miningcore.Contracts.Contract;
 using Transaction = NBitcoin.Transaction;
 using uint256 = NBitcoin.uint256;
+using System;
 
 namespace Miningcore.Blockchain.Handshake;
 
@@ -49,6 +50,9 @@ public class HandshakeJob
     protected byte[] coinbaseInitial;
     protected string coinbaseInitialHex;
     protected string[] merkleBranchesHex;
+    protected byte[] merkleRootHash;
+    protected string merkleRootHashHex;
+    protected byte[] coinbaseHash;
     protected MerkleTree mt;
 
     ///////////////////////////////////////////
@@ -76,24 +80,28 @@ public class HandshakeJob
             .Select(tx => (tx.TxId ?? tx.Hash)
                 .HexToByteArray()
                 .ReverseInPlace())
-            .ToArray();
+        .ToArray();
 
         mt = new MerkleTree(transactionHashes);
 
         merkleBranchesHex = mt.Steps
             .Select(x => x.ToHexString())
             .ToArray();
+
+        var merkleRoot = mt.WithFirst(coinbaseHash);
+        merkleRootHash = merkleRoot;
+        merkleRootHashHex = merkleRoot.ToHexString();
     }
 
-    protected virtual void BuildCoinbase()
+    protected virtual void BuildCoinbase(bool withExtraNonce, long now)
     {
         // generate script parts
-        var sigScriptInitial = GenerateScriptSigInitial();
+        var sigScriptInitial = GenerateScriptSigInitial(now);
         var sigScriptInitialBytes = sigScriptInitial.ToBytes();
 
         var sigScriptLength = (uint) (
             sigScriptInitial.Length +
-            extraNoncePlaceHolderLength +
+            (withExtraNonce ? extraNoncePlaceHolderLength : 0) +
             scriptSigFinalBytes.Length);
 
         // output transaction
@@ -155,6 +163,12 @@ public class HandshakeJob
 
             //   coinbaseFinalHex = coinbaseFinal.ToHexString();
         }
+
+        //we have to generate coinbase hash here
+        coinbaseHash = new byte[32];
+        coinbaseHasher.Digest(coinbaseInitial.Concat(coinbaseFinal).ToArray(), coinbaseHash);
+
+
     }
 
     protected virtual void AppendCoinbaseFinal(BitcoinStream bs)
@@ -220,10 +234,8 @@ public class HandshakeJob
         }
     }
 
-    protected virtual Script GenerateScriptSigInitial()
+    protected virtual Script GenerateScriptSigInitial(long now)
     {
-        var now = ((DateTimeOffset) clock.Now).ToUnixTimeSeconds();
-
         // script ops
         var ops = new List<Op>();
 
@@ -306,7 +318,7 @@ public class HandshakeJob
         //var testHexMiner = Encoders.Hex.EncodeData(testBytesMiner);
 
         // build merkle-root
-        var merkleRoot = mt.WithFirst(coinbaseHash.ToArray());
+       // var merkleRoot = mt.WithFirst(coinbaseHash.ToArray());
 
         //    return test;
         // Build version
@@ -318,6 +330,8 @@ public class HandshakeJob
 
         Array.Resize(ref extraNonce, 24);
 
+        var testc = merkleRootHashHex;
+
 #pragma warning disable 618
         var blockHeader = new HandshakeBlockHeader
 #pragma warning restore 618
@@ -325,7 +339,7 @@ public class HandshakeJob
             Version = unchecked((int) version),
             Bits = new Target(Encoders.Hex.DecodeData(BlockTemplate.Bits)),
             HashPrevBlock = uint256.Parse(BlockTemplate.PreviousBlockhash), //uint256.Parse("5b6ef2d3c1f3cdcadfd9a030ba1811efdd17740f14e166489760741d075992e0"), 
-            HashMerkleRoot = uint256.Parse(coinbaseInitialHex), // uint256.Parse("28b17095216d5e211ba1f61031416a51efca54eacb8c9059440c4671b0625bbe"), //new uint256(merkleRoot),
+            HashMerkleRoot = new uint256(merkleRootHash, false), // uint256.Parse(coinbaseInitialHex), // uint256.Parse("28b17095216d5e211ba1f61031416a51efca54eacb8c9059440c4671b0625bbe"), //new uint256(merkleRoot),
             BlockTime = DateTimeOffset.FromUnixTimeSeconds(nTime),
             Nonce = nonce,
             HashReservedRoot = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000000"), //new uint256(),
@@ -899,9 +913,24 @@ public class HandshakeJob
         Array.Reverse(byteArray);
         previousBlockHashReversedHex = BitConverter.ToString(byteArray).Replace("-", "").ToLower();
 
-
+        var now = ((DateTimeOffset) clock.Now).ToUnixTimeSeconds();
+        BuildCoinbase(false, now);
         BuildMerkleBranches();
-        BuildCoinbase();
+
+        var txHEX = coinbaseInitial.Concat(coinbaseFinal).ToHexString();
+        var txInitialHEX = coinbaseInitial.ToHexString();
+        var txFinalHEX = coinbaseFinal.ToHexString();
+        var coinbaseHashHEX = coinbaseHash.ToHexString();
+
+        var logger = LogUtil.GetPoolScopedLogger(typeof(HandshakeJob), "Zeev");
+
+        logger.Info(() => $"txHEX {txHEX}");
+        logger.Info(() => $"txInitialHEX {txInitialHEX}");
+        logger.Info(() => $"txFinalHEX {txFinalHEX}");
+        logger.Info(() => $"coinbaseHashHEX {coinbaseHashHEX}");
+        logger.Info(() => $"merkleRootHashHex {merkleRootHashHex}");
+
+        BuildCoinbase(true, now);
 
         var curTimeBytes = BitConverter.GetBytes(BlockTemplate.CurTime); //getting BE
         //var curTimeHex = (curTimeBytes.ToHexString());
@@ -919,7 +948,7 @@ public class HandshakeJob
         {
             JobId,
             BlockTemplate.PreviousBlockhash, //"5b6ef2d3c1f3cdcadfd9a030ba1811efdd17740f14e166489760741d075992e0"
-            coinbaseInitialHex, //"28b17095216d5e211ba1f61031416a51efca54eacb8c9059440c4671b0625bbe", //coinbaseInitialHex,
+            merkleRootHashHex, //"28b17095216d5e211ba1f61031416a51efca54eacb8c9059440c4671b0625bbe", //coinbaseInitialHex,
             coinbaseFinalHex, //"59919422c20530ece2b328adf63ec3f35a10e79375731687a81dfa7cd83a24e7",
             BlockTemplate.TreeRoot, //BlockTemplate.TreeRoot,
             BlockTemplate.ReservedRoot, //BlockTemplate.ReservedRoot,
