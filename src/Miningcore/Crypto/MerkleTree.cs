@@ -110,7 +110,9 @@ public class MerkleTree
         Contract.RequiresNonNull(first);
 
         foreach(var step in Steps)
+        {
             first = DoubleDigest(first.Concat(step)).ToArray();
+        }
 
         return first;
     }

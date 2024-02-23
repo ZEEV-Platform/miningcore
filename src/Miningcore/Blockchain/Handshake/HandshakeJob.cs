@@ -88,7 +88,7 @@ public class HandshakeJob
             .Select(x => x.ToHexString())
             .ToArray();
 
-        var merkleRoot = mt.WithFirst(coinbaseHash);
+        var merkleRoot = mt.WithFirst(coinbaseHash).ToNewReverseArray();
         merkleRootHash = merkleRoot;
         merkleRootHashHex = merkleRoot.ToHexString();
     }
