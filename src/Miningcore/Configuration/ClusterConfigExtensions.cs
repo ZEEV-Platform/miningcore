@@ -188,9 +188,9 @@ public partial class ErgoCoinTemplate
     #endregion
 }
 
-public partial class HandshakeCoinTemplate
+public partial class ZEEVCoinTemplate
 {
-    public HandshakeCoinTemplate()
+    public ZEEVCoinTemplate()
     {
         coinbaseHasherValue = new Lazy<IHashAlgorithm>(() =>
             HashAlgorithmFactory.GetHash(ComponentContext, CoinbaseHasher));
@@ -217,7 +217,7 @@ public partial class HandshakeCoinTemplate
     public IHashAlgorithm BlockHasherValue => blockHasherValue.Value;
     public IHashAlgorithm PoSBlockHasherValue => posBlockHasherValue.Value;
 
-    public HandshakeNetworkParams GetNetwork(ChainName chain)
+    public ZEEVNetworkParams GetNetwork(ChainName chain)
     {
         if(Networks == null || Networks.Count == 0)
             return null;

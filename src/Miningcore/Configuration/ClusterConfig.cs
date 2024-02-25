@@ -31,8 +31,8 @@ public enum CoinFamily
     [EnumMember(Value = "ergo")]
     Ergo,
 
-    [EnumMember(Value = "handshake")]
-    Handshake,
+    [EnumMember(Value = "zeev")]
+    ZEEV,
 }
 
 public abstract partial class CoinTemplate
@@ -135,7 +135,7 @@ public abstract partial class CoinTemplate
         {CoinFamily.Cryptonote, typeof(CryptonoteCoinTemplate)},
         {CoinFamily.Ethereum, typeof(EthereumCoinTemplate)},
         {CoinFamily.Ergo, typeof(ErgoCoinTemplate)},
-        {CoinFamily.Handshake, typeof(HandshakeCoinTemplate)},
+        {CoinFamily.ZEEV, typeof(ZEEVCoinTemplate)},
     };
 }
 
@@ -515,9 +515,9 @@ public partial class ErgoCoinTemplate : CoinTemplate
 {
 }
 
-public partial class HandshakeCoinTemplate : CoinTemplate
+public partial class ZEEVCoinTemplate : CoinTemplate
 {
-    public class HandshakeNetworkParams
+    public class ZEEVNetworkParams
     {
         /// <summary>
         /// Arbitrary extension data
@@ -579,7 +579,7 @@ public partial class HandshakeCoinTemplate : CoinTemplate
     public JToken BlockTemplateRpcExtraParams { get; set; }
 
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-    public Dictionary<string, HandshakeNetworkParams> Networks { get; set; }
+    public Dictionary<string, ZEEVNetworkParams> Networks { get; set; }
 
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     public int? CoinbaseMinConfimations { get; set; }

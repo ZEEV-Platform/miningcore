@@ -4343,14 +4343,14 @@
         "name": "Zeevcoin",
         "canonicalName": "Zeevcoin",
         "symbol": "ZEEV",
-        "family": "handshake",
+        "family": "zeev",
         "website": "https://www.zeevcoin.org/",
         "market": "https://coinmarketcap.com/currencies/bitcoin/",
         "twitter": "https://twitter.com/bitcoin",
         "telegram": "",
         "discord": "",
         "coinbaseHasher": {
-            "hash": "sha256d"
+            "hash": "blake2b"
         },
         "headerHasher": {
             "hash": "handshake"

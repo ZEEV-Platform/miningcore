@@ -23,7 +23,7 @@ using Microsoft.IO;
 using Miningcore.Blockchain.Ergo;
 using Miningcore.Nicehash;
 using Miningcore.Pushover;
-using Miningcore.Blockchain.Handshake;
+using Miningcore.Blockchain.ZEEV;
 
 namespace Miningcore;
 
@@ -172,9 +172,9 @@ public class AutofacModule : Module
         builder.RegisterType<ErgoJobManager>();
 
         //////////////////////
-        // Handshake
+        // ZEEV
 
-        builder.RegisterType<HandshakeJobManager>();
+        builder.RegisterType<ZEEVJobManager>();
 
         base.Load(builder);
     }
