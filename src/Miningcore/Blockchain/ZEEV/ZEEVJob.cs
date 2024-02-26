@@ -51,11 +51,12 @@ public class ZEEVJob
     protected string coinbaseFinalHex;
     protected byte[] coinbaseInitial;
     protected string coinbaseInitialHex;
-    protected string[] merkleBranchesHex;
+    //protected string[] merkleBranchesHex;
     protected byte[] merkleRootHash;
     protected string merkleRootHashHex;
+    protected byte[] witnessRootHash;
+    protected string witnessRootHashHex;
     protected byte[] coinbaseHash;
-    protected ZEEVMerkleTree mt;
 
     ///////////////////////////////////////////
     // GetJobParams related properties
@@ -79,16 +80,23 @@ public class ZEEVJob
     protected virtual void BuildMerkleBranches()
     {
         var transactionHashes = BlockTemplate.Transactions
-            .Select(tx => (tx.TxId ?? tx.Hash)
+            .Select(tx => tx.TxId
                 .HexToByteArray()
                 .ReverseInPlace())
-        .ToArray();
-
-        mt = new ZEEVMerkleTree(transactionHashes);
-
-        merkleBranchesHex = mt.Steps
-            .Select(x => x.ToHexString())
             .ToArray();
+
+        var witnessHashes = BlockTemplate.Transactions
+            .Select(tx => tx.Hash
+                .HexToByteArray()
+                .ReverseInPlace())
+            .ToArray();
+
+        var mt = new ZEEVMerkleTree(transactionHashes);
+        var witnessMt = new ZEEVMerkleTree(witnessHashes);
+
+        //merkleBranchesHex = mt.Steps
+        //    .Select(x => x.ToHexString())
+        //    .ToArray();
 
         var logger = LogUtil.GetPoolScopedLogger(typeof(ZEEVJob), "Zeev");
 
@@ -108,7 +116,20 @@ public class ZEEVJob
         merkleRootHash = merkleRoot;
         merkleRootHashHex = merkleRoot.ToHexString();
 
+        first = new uint256().ToBytes();
+        foreach(var step in witnessMt.Steps)
+        {
+            logger.Info(() => $"StepW {step.ToHexString()}");
+            first = Blake2B.ComputeHash(first.Concat(step).ToArray(), blake2bConfig);
+            logger.Info(() => $"FirstW {first.ToHexString()}");
+        }
+
+        var witnessRoot = witnessMt.WithFirst(new uint256().ToBytes()).ToNewReverseArray();
+        witnessRootHash = witnessRoot;
+        witnessRootHashHex = witnessRoot.ToHexString();
+
         logger.Info(() => $"merkleRootHashHex {merkleRoot.ToHexString()}");
+        logger.Info(() => $"witnessRootHashHex {witnessRoot.ToHexString()}");
     }
 
     protected virtual void BuildCoinbase(bool withExtraNonce, long now)
@@ -362,7 +383,7 @@ public class ZEEVJob
             Nonce = nonce,
             HashReservedRoot = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000000"), //new uint256(),
             HashTreeRoot = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000000"), //new uint256(),
-            HashWitnessRoot = uint256.Parse(coinbaseFinalHex), // uint256.Parse("59919422c20530ece2b328adf63ec3f35a10e79375731687a81dfa7cd83a24e7"), //new uint256(),
+            HashWitnessRoot = new uint256(witnessRootHash, false), // uint256.Parse("59919422c20530ece2b328adf63ec3f35a10e79375731687a81dfa7cd83a24e7"), //new uint256(),
             HashMask = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000000"), //new uint256(),
             ExtraNonce = extraNonce
         };
@@ -967,7 +988,7 @@ public class ZEEVJob
             JobId,
             BlockTemplate.PreviousBlockhash, //"5b6ef2d3c1f3cdcadfd9a030ba1811efdd17740f14e166489760741d075992e0"
             merkleRootHashHex, //"28b17095216d5e211ba1f61031416a51efca54eacb8c9059440c4671b0625bbe", //coinbaseInitialHex,
-            coinbaseFinalHex, //"59919422c20530ece2b328adf63ec3f35a10e79375731687a81dfa7cd83a24e7",
+            witnessRootHashHex, //coinbaseFinalHex, //"59919422c20530ece2b328adf63ec3f35a10e79375731687a81dfa7cd83a24e7",
             BlockTemplate.TreeRoot, //BlockTemplate.TreeRoot,
             BlockTemplate.ReservedRoot, //BlockTemplate.ReservedRoot,
             BlockTemplate.Version.ToStringHex8(),
