@@ -48,10 +48,7 @@ public class ZEEVJob
     protected readonly ConcurrentDictionary<string, bool> submissions = new(StringComparer.OrdinalIgnoreCase);
     protected uint256 blockTargetValue;
     protected byte[] coinbaseFinal;
-    protected string coinbaseFinalHex;
     protected byte[] coinbaseInitial;
-    protected string coinbaseInitialHex;
-    //protected string[] merkleBranchesHex;
     protected byte[] merkleRootHash;
     protected string merkleRootHashHex;
     protected byte[] witnessRootHash;
@@ -94,22 +91,13 @@ public class ZEEVJob
         var mt = new ZEEVMerkleTree(transactionHashes);
         var witnessMt = new ZEEVMerkleTree(witnessHashes);
 
-        //merkleBranchesHex = mt.Steps
-        //    .Select(x => x.ToHexString())
-        //    .ToArray();
-
-        var logger = LogUtil.GetPoolScopedLogger(typeof(ZEEVJob), "Zeev");
-
         var first = coinbaseHash;
-        logger.Info(() => $"First {first.ToHexString()}");
         var blake2bConfig = new Blake2BConfig();
         blake2bConfig.OutputSizeInBytes = 32;
 
         foreach(var step in mt.Steps)
         {
-            logger.Info(() => $"Step {step.ToHexString()}");
             first = Blake2B.ComputeHash(first.Concat(step).ToArray(), blake2bConfig);
-            logger.Info(() => $"First {first.ToHexString()}");
         }
 
         var merkleRoot = mt.WithFirst(coinbaseHash).ToNewReverseArray();
@@ -119,17 +107,12 @@ public class ZEEVJob
         first = new uint256().ToBytes();
         foreach(var step in witnessMt.Steps)
         {
-            logger.Info(() => $"StepW {step.ToHexString()}");
             first = Blake2B.ComputeHash(first.Concat(step).ToArray(), blake2bConfig);
-            logger.Info(() => $"FirstW {first.ToHexString()}");
         }
 
         var witnessRoot = witnessMt.WithFirst(new uint256().ToBytes()).ToNewReverseArray();
         witnessRootHash = witnessRoot;
         witnessRootHashHex = witnessRoot.ToHexString();
-
-        logger.Info(() => $"merkleRootHashHex {merkleRoot.ToHexString()}");
-        logger.Info(() => $"witnessRootHashHex {witnessRoot.ToHexString()}");
     }
 
     protected virtual void BuildCoinbase(bool withExtraNonce, long now)
@@ -172,7 +155,6 @@ public class ZEEVJob
 
             // done
             coinbaseInitial = stream.ToArray();
-            coinbaseInitialHex = coinbaseInitial.Take(32).ToHexString();
         }
 
         // build coinbase final
@@ -198,16 +180,11 @@ public class ZEEVJob
 
             // done
             coinbaseFinal = stream.ToArray();
-            coinbaseFinalHex = coinbaseFinal[^32..].ToHexString();
-
-            //   coinbaseFinalHex = coinbaseFinal.ToHexString();
         }
 
         //we have to generate coinbase hash here
         coinbaseHash = new byte[32];
         coinbaseHasher.Digest(coinbaseInitial.Concat(coinbaseFinal).ToArray(), coinbaseHash);
-
-
     }
 
     protected virtual void AppendCoinbaseFinal(BitcoinStream bs)
@@ -344,22 +321,6 @@ public class ZEEVJob
 
     protected ZEEVBlockHeader SerializeHeader(Span<byte> coinbaseHash, uint nTime, uint nonce, byte[] extraNonce, uint? versionMask, uint? versionBits)
     {
-        var headerHex2 = "a6496be42fe1b065000000000000000000000005b4490d1678b73c066ed15b6cbe0e98f684612504ffa4f97e34059276d78aa47040ba328b408416b61c80ac212681e1948ac2622705af27f301fcaf2eb1143da20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ffd4f0144d43f2d8bb5d0da049911c392ea51e8463c5e74c2ae51b70d3016f6ae037061a67848020dee27740f93d8f9a937a1912be6068e77adb85eb43cd43d000000005a6407190000000000000000000000000000000000000000000000000000000000000000";
-        var header = Enumerable.Range(0, headerHex2.Length)
-             .Where(x => x % 2 == 0)
-             .Select(x => Convert.ToByte(headerHex2.Substring(x, 2), 16))
-             .ToArray();
-
-        var test = new ZEEVBlockHeader(headerHex2);
-        //var testBytes = test.ToBytes();
-        //var testBytesMiner = test.ToMiner();
-        //var testHex = Encoders.Hex.EncodeData(testBytes);
-        //var testHexMiner = Encoders.Hex.EncodeData(testBytesMiner);
-
-        // build merkle-root
-       // var merkleRoot = mt.WithFirst(coinbaseHash.ToArray());
-
-        //    return test;
         // Build version
         var version = BlockTemplate.Version;
 
@@ -369,122 +330,110 @@ public class ZEEVJob
 
         Array.Resize(ref extraNonce, 24);
 
-        var testc = merkleRootHashHex;
-
 #pragma warning disable 618
         var blockHeader = new ZEEVBlockHeader
 #pragma warning restore 618
         {
             Version = unchecked((int) version),
             Bits = new Target(Encoders.Hex.DecodeData(BlockTemplate.Bits)),
-            HashPrevBlock = uint256.Parse(BlockTemplate.PreviousBlockhash), //uint256.Parse("5b6ef2d3c1f3cdcadfd9a030ba1811efdd17740f14e166489760741d075992e0"), 
-            HashMerkleRoot = new uint256(merkleRootHash, false), // uint256.Parse(coinbaseInitialHex), // uint256.Parse("28b17095216d5e211ba1f61031416a51efca54eacb8c9059440c4671b0625bbe"), //new uint256(merkleRoot),
+            HashPrevBlock = uint256.Parse(BlockTemplate.PreviousBlockhash),
+            HashMerkleRoot = new uint256(merkleRootHash, false),
             BlockTime = DateTimeOffset.FromUnixTimeSeconds(nTime),
             Nonce = nonce,
-            HashReservedRoot = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000000"), //new uint256(),
-            HashTreeRoot = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000000"), //new uint256(),
-            HashWitnessRoot = new uint256(witnessRootHash, false), // uint256.Parse("59919422c20530ece2b328adf63ec3f35a10e79375731687a81dfa7cd83a24e7"), //new uint256(),
-            HashMask = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000000"), //new uint256(),
+            HashReservedRoot = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000000"),
+            HashTreeRoot = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000000"),
+            HashWitnessRoot = new uint256(witnessRootHash, false), 
+            HashMask = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000000"), 
             ExtraNonce = extraNonce
         };
-
-        var testBytes = test.ToBytes();
-        var blockBytes = blockHeader.ToBytes();
-
-        var testBytesHex = Encoders.Hex.EncodeData(testBytes);
-        var blockBytesHex = Encoders.Hex.EncodeData(blockBytes);
-
-        //var testBytesMiner = test.ToMiner();
-        //var testHex = Encoders.Hex.EncodeData(testBytes);
-        //var testHexMiner = Encoders.Hex.EncodeData(testBytesMiner);
 
         return blockHeader;
     }
 
-    public static BigInteger Div(BigInteger x, double y)
-    {
-        var yb = new BigInteger(y);
+    //public static BigInteger Div(BigInteger x, double y)
+    //{
+    //    var yb = new BigInteger(y);
 
-        if(Math.Abs(y) < double.Epsilon)
-        {
-            throw new ArgumentException("Division by zero is not allowed.");
-        }
+    //    if(Math.Abs(y) < double.Epsilon)
+    //    {
+    //        throw new ArgumentException("Division by zero is not allowed.");
+    //    }
 
-        BigInteger q = (BigInteger) (x / yb);
+    //    BigInteger q = (BigInteger) (x / yb);
 
-        if(x >= 0)
-        {
-            return q;
-        }
+    //    if(x >= 0)
+    //    {
+    //        return q;
+    //    }
 
-        BigInteger r = x - (BigInteger) (q * yb);
+    //    BigInteger r = x - (BigInteger) (q * yb);
 
-        if(r < 0)
-        {
-            if(yb < 0)
-                q += 1;
-            else
-                q -= 1;
-        }
+    //    if(r < 0)
+    //    {
+    //        if(yb < 0)
+    //            q += 1;
+    //        else
+    //            q -= 1;
+    //    }
 
-        return q;
-    }
+    //    return q;
+    //}
 
-    static byte[] ToCompactByteArray(BigInteger num)
-    {
-        if(num.IsZero)
-            return new byte[] { 0 };
+    //static byte[] ToCompactByteArray(BigInteger num)
+    //{
+    //    if(num.IsZero)
+    //        return new byte[] { 0 };
 
-        int exponent = num.ToByteArray().Length;
-        int mantissa;
+    //    int exponent = num.ToByteArray().Length;
+    //    int mantissa;
 
-        if(exponent <= 3)
-        {
-            mantissa = (int) num;
-            mantissa <<= 8 * (3 - exponent);
-        }
-        else
-        {
-            mantissa = (int) (num >> 8 * (exponent - 3));
-        }
+    //    if(exponent <= 3)
+    //    {
+    //        mantissa = (int) num;
+    //        mantissa <<= 8 * (3 - exponent);
+    //    }
+    //    else
+    //    {
+    //        mantissa = (int) (num >> 8 * (exponent - 3));
+    //    }
 
-        if((mantissa & 0x800000) != 0)
-        {
-            mantissa >>= 8;
-            exponent += 1;
-        }
+    //    if((mantissa & 0x800000) != 0)
+    //    {
+    //        mantissa >>= 8;
+    //        exponent += 1;
+    //    }
 
-        int compact = (exponent << 24) | mantissa;
+    //    int compact = (exponent << 24) | mantissa;
 
-        if(num.Sign < 0)
-            compact |= 0x800000;
+    //    if(num.Sign < 0)
+    //        compact |= 0x800000;
 
-        compact = (int) ((uint) compact);
+    //    compact = (int) ((uint) compact);
 
-        // Convert compact to a byte array
-        List<byte> byteArray = new List<byte>();
-        for(int i = 0; i < 4; i++)
-        {
-            byteArray.Insert(0, (byte) ((compact & (0xFF << (i * 8))) >> (i * 8)));
-        }
-        return byteArray.ToArray();
-    }
+    //    // Convert compact to a byte array
+    //    List<byte> byteArray = new List<byte>();
+    //    for(int i = 0; i < 4; i++)
+    //    {
+    //        byteArray.Insert(0, (byte) ((compact & (0xFF << (i * 8))) >> (i * 8)));
+    //    }
+    //    return byteArray.ToArray();
+    //}
 
-    public static byte[] GetBitsFromDifficult(double difficulty)
-    {
-        BigInteger max = BigInteger.Parse("000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", NumberStyles.HexNumber);
+    //public static byte[] GetBitsFromDifficult(double difficulty)
+    //{
+    //    BigInteger max = BigInteger.Parse("000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", NumberStyles.HexNumber);
 
-        var s = Div(max, difficulty);
-        var cmpct = ToCompactByteArray(s);
+    //    var s = Div(max, difficulty);
+    //    var cmpct = ToCompactByteArray(s);
 
-        return cmpct;
-    }
+    //    return cmpct;
+    //}
 
     protected virtual (Share Share, string BlockHex) ProcessShareInternal(
         StratumConnection worker, string extraNonce2, uint nTime, string nonceString, uint? versionBits)
     {
         uint nonce = uint.Parse(nonceString, NumberStyles.HexNumber);
-        var nonceBytes = nonceString.HexToByteArray();
+        // var nonceBytes = nonceString.HexToByteArray();
 
         var context = worker.ContextAs<ZEEVWorkerContext>();
         var extraNonce1 = context.ExtraNonce1;
@@ -494,115 +443,30 @@ public class ZEEVJob
         Span<byte> coinbaseHash = stackalloc byte[32];
         coinbaseHasher.Digest(coinbase, coinbaseHash);
 
-        //----------------------------------------- hash block-header (extraNonce1 + extraNonce2).HexToByteArray()
-        //nonceBytes.Concat((extraNonce2).HexToByteArray()).ToArray()
-        // new byte[24]
         var header = SerializeHeader(coinbaseHash, nTime, nonce, (extraNonce1 + extraNonce2).HexToByteArray(), context.VersionRollingMask, versionBits);
         var headerBytesMiner = header.ToMiner();
-        var headerBytesX = header.ToBytes();
-        var headerBytesHex = Encoders.Hex.EncodeData(headerBytesX);
-        var headerBytesMinerHex = Encoders.Hex.EncodeData(headerBytesMiner);
+        //var headerBytesX = header.ToBytes();
+        //var headerBytesHex = Encoders.Hex.EncodeData(headerBytesX);
+        //var headerBytesMinerHex = Encoders.Hex.EncodeData(headerBytesMiner);
         Span<byte> headerHash = stackalloc byte[32];
         ((Handshake) headerHasher).Digest(headerBytesMiner, out headerHash, (ulong) nTime, BlockTemplate, coin, networkParams);
-        var headerValueHex = Encoders.Hex.EncodeData(headerHash);
+        //var headerValueHex = Encoders.Hex.EncodeData(headerHash);
         var headerValue = new uint256(headerHash);
-        var headerHashRev = new byte[32];
-        headerHash.CopyTo(headerHashRev);
-        headerHashRev = headerHashRev.Reverse().ToArray();
-        var headerValueRev = new uint256(headerHashRev);
-
-
-        //testuint
-        var uint256hash = new uint256(headerHashRev);
-        var uint256hashHex = new uint256(headerValueHex);
-        var w2 = new Target(new uint256(headerHashRev));
-        var d1 = new Target(new uint256(headerValueHex));
-        //miner difficult configuration
-
-        var shareTargetBits = GetBitsFromDifficult(context.Difficulty);
-        var shareTarget = new Target(shareTargetBits);
-
-        var difficulty = GetDifficulty(new Target(headerValue));
-        var difficulty2 = GetDifficulty(new Target(headerHash.ToBigInteger()));
-
-        var blockTargetValueReversed = new uint256(blockTargetValue.ToBytes().Reverse().ToArray());
-        var targetBlockTargetValue = new Target(blockTargetValue);
-        var targetBlockTargetValueReversed = new Target(blockTargetValueReversed);
-
-        var WisBlockCandidateYY = headerValueRev <= blockTargetValueReversed;
-        var WisBlockCandidateYYX = headerValue <= blockTargetValueReversed;
-        var WisBlockCandidateXX = headerValue <= blockTargetValue;
-        var WisBlockCandidateXXY = headerValueRev <= blockTargetValue;
-
-        bool atLeastOneTrue2 = new[] { WisBlockCandidateYY, WisBlockCandidateYYX, WisBlockCandidateXX, WisBlockCandidateXXY }.Any();
-        if(atLeastOneTrue2)
-        {
-            var isTrue = true;
-        }
+        //var headerHashRev = new byte[32];
+        //headerHash.CopyTo(headerHashRev);
+        //headerHashRev = headerHashRev.Reverse().ToArray();
+        //var headerValueRev = new uint256(headerHashRev);
 
         // calc share-diff
-        // var shareDiff = (double) new BigRational(ZEEVConstants.Diff1, GetDifficulty(header.Bits)) * shareMultiplier;
-        var shareDiff = (double) new BigRational(ZEEVConstants.Diff1, headerHash.ToBigInteger()) * shareMultiplier; //
-        var shareDiff2Rev = (double) new BigRational(ZEEVConstants.Diff1, new Span<byte>(headerHashRev).ToBigInteger()) * shareMultiplier; //
-     //   var shareDiff3 = (double) new BigRational(ZEEVConstants.Diff1, GetDifficulty(new Target(headerHash.ToBigInteger()))) * shareMultiplier;
-        //headerHash.Reverse();
-        //var shareDiffRev2 = (double) new BigRational(ZEEVConstants.Diff1, headerHash.ToBigInteger()) * shareMultiplier;
-        //var shareDiffRev2Rev = (double) new BigRational(ZEEVConstants.Diff1, new Span<byte>(headerHashRev).ToBigInteger()) * shareMultiplier;
-        //var shareDiffRev3 = (double) new BigRational(ZEEVConstants.Diff1, GetDifficulty(new Target(headerHash.ToBigInteger()))) * shareMultiplier;
-
-        var hashVal = headerHash.ToBigInteger();
-        var hashValRev = new Span<byte>(headerHashRev).ToBigInteger();
-        var diffff = Math.Pow(2, 32);
-        var ssssss = BigInteger.Parse("00ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
-        var headerHashDef = GetDifficulty(new Target(headerHash.ToBigInteger()));
-        var headerHashDefRev = GetDifficulty(new Target(new Span<byte>(headerHashRev).ToBigInteger()));
-        var headerDiff = GetDifficulty(header.Bits);
+        var shareDiff = (double) new BigRational(ZEEVConstants.Diff1, headerHash.ToBigInteger()) * shareMultiplier; 
+        //var shareDiff2Rev = (double) new BigRational(ZEEVConstants.Diff1, new Span<byte>(headerHashRev).ToBigInteger()) * shareMultiplier; 
 
         var stratumDifficulty = context.Difficulty;
-        //var ratio = shareDiff / stratumDifficulty;
         var ratio = (double) shareDiff / stratumDifficulty;
-        var ratio2Rev = (double) shareDiff2Rev / stratumDifficulty;
-        //var ratio3 = shareDiff3 / stratumDifficulty;
-        //var ratioRev2 = shareDiffRev2 / stratumDifficulty;
-        //var ratioRev3 = shareDiffRev3 / stratumDifficulty;
+        //var ratio2Rev = (double) shareDiff2Rev / stratumDifficulty;
 
-        //var xx = headerHash.ToBigInteger();
-        //var xxx = BigInteger.Parse("00ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
-        //var x = new BigInteger(blockTargetValue.ToBytes());
-        
-        // check if the share meets the much harder block difficulty (block candidate)
-
-        try
-        {
-            var targetHeader = new Target(headerValue);
-            targetBlockTargetValue = new Target(blockTargetValue);
-            targetBlockTargetValueReversed = new Target(blockTargetValueReversed);
-        }
-        catch(Exception)
-        {
-
-            throw;
-        }
-        var isBlockCandidate = headerValueRev <= blockTargetValue;
-        if(isBlockCandidate)
-        {
-            isBlockCandidate = true;
-        }
-
-        var isBlockCandidate2 = headerValueRev <= blockTargetValueReversed;
-        if(isBlockCandidate2)
-        {
-            isBlockCandidate = true;
-        }
-
-        var isBlockCandidate3 = headerValue <= blockTargetValue;
-        if (isBlockCandidate3)
-        {
-            isBlockCandidate = true;
-        }
-
-        var isBlockCandidate4 = headerValue <= blockTargetValueReversed;
-        if(isBlockCandidate4)
+        var isBlockCandidate = headerValue <= blockTargetValue;
+        if (isBlockCandidate)
         {
             isBlockCandidate = true;
         }
@@ -895,53 +759,10 @@ public class ZEEVJob
         this.headerHasher = headerHasher;
         this.blockHasher = blockHasher;
 
-        //if(!string.IsNullOrEmpty(BlockTemplate.Target))
-        //{
-        //    blockTargetValue = new uint256(BlockTemplate.Target);
-        //}
-        //else
-        //{
         var tmp = new Target(BlockTemplate.Bits.HexToByteArray().ToArray());
         blockTargetValue = tmp.ToUInt256();
-        //}
-
-        //tmp = new Target("1c00ffff".HexToByteArray().ToArray());
-        //blockTargetValue = tmp.ToUInt256();
-
-        //var sssss = BlockTemplate.Bits.HexToByteArray();
-        //var por = new BigInteger(sssss.Reverse().ToArray());
 
         var bitsBytes = BlockTemplate.Bits.HexToByteArray();
-        //blockTargetValue = new Target(por).ToUInt256();
-
-
-        //Array.Reverse(bitsBytes);
-
-        //var tmpc = new Target(BlockTemplate.Bits.HexToByteArray());
-        //blockTargetValue = tmpc.ToUInt256();
-        //var bytesssss = blockTargetValue.ToBytes();
-        //var bytesssssR = blockTargetValue.ToBytes().Reverse().ToArray();
-
-        //var xx2 = new uint256(bytesssss);
-        //var x4 = new uint256(bytesssssR);
-        //var xx = new uint256(BlockTemplate.Target);
-
-        //var ssssss = BigInteger.Parse("000000000000000000000000000000000000000000000000000000001d00ffff", NumberStyles.HexNumber);
-        //var ssssss2 = BigInteger.Parse("00000000ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
-        //var ssssss3 = BigInteger.Parse("0000000000000000000000000000000000000000000000000000ffff00000000", NumberStyles.HexNumber);
-
-        //    previousBlockHashReversedHex = BlockTemplate.PreviousBlockhash
-        //.HexToByteArray()
-        //.ReverseByteOrder()
-        //.ToHexString();
-
-        //string[] chunks = new string[8];
-        //for(int i = 0; i < 8; i++)
-        //{
-        //    chunks[i] = BlockTemplate.PreviousBlockhash.Substring(i * 8, 8);
-        //}
-        //Array.Reverse(chunks);
-        //previousBlockHashReversedHex = string.Concat(chunks);
 
         //reverse total
         byte[] byteArray = new byte[BlockTemplate.PreviousBlockhash.Length / 2];
@@ -956,66 +777,32 @@ public class ZEEVJob
         BuildCoinbase(false, now);
         BuildMerkleBranches();
 
-        var txHEX = coinbaseInitial.Concat(coinbaseFinal).ToHexString();
-        var txInitialHEX = coinbaseInitial.ToHexString();
-        var txFinalHEX = coinbaseFinal.ToHexString();
-        var coinbaseHashHEX = coinbaseHash.ToHexString();
-
-        var logger = LogUtil.GetPoolScopedLogger(typeof(ZEEVJob), "Zeev");
-
-        logger.Info(() => $"txHEX {txHEX}");
-        logger.Info(() => $"txInitialHEX {txInitialHEX}");
-        logger.Info(() => $"txFinalHEX {txFinalHEX}");
-        logger.Info(() => $"coinbaseHashHEX {coinbaseHashHEX}");
-        logger.Info(() => $"merkleRootHashHex {merkleRootHashHex}");
+        //var txHEX = coinbaseInitial.Concat(coinbaseFinal).ToHexString();
+        //var txInitialHEX = coinbaseInitial.ToHexString();
+        //var txFinalHEX = coinbaseFinal.ToHexString();
+        //var coinbaseHashHEX = coinbaseHash.ToHexString();
 
         BuildCoinbase(true, now);
 
-        var curTimeBytes = BitConverter.GetBytes(BlockTemplate.CurTime); //getting BE
-        //var curTimeHex = (curTimeBytes.ToHexString());
-        //var i1 = uint.Parse(curTimeHex, NumberStyles.HexNumber);
+        var curTimeBytes = BitConverter.GetBytes(BlockTemplate.CurTime);
         Array.Reverse(curTimeBytes);
-        //var i2 = uint.Parse(curTimeBytes.ToHexString(), NumberStyles.HexNumber);
-
-
-        //int value = Convert.ToInt32("00000003");
-        uint num = uint.Parse("00000003", System.Globalization.NumberStyles.AllowHexSpecifier);
-        uint num2 = uint.Parse("20000000", System.Globalization.NumberStyles.AllowHexSpecifier);
-        // var s = uint.Parse("00000003")
 
         jobParams = new object[]
         {
             JobId,
-            BlockTemplate.PreviousBlockhash, //"5b6ef2d3c1f3cdcadfd9a030ba1811efdd17740f14e166489760741d075992e0"
-            merkleRootHashHex, //"28b17095216d5e211ba1f61031416a51efca54eacb8c9059440c4671b0625bbe", //coinbaseInitialHex,
-            witnessRootHashHex, //coinbaseFinalHex, //"59919422c20530ece2b328adf63ec3f35a10e79375731687a81dfa7cd83a24e7",
-            BlockTemplate.TreeRoot, //BlockTemplate.TreeRoot,
-            BlockTemplate.ReservedRoot, //BlockTemplate.ReservedRoot,
+            BlockTemplate.PreviousBlockhash,
+            merkleRootHashHex,
+            witnessRootHashHex,
+            BlockTemplate.TreeRoot,
+            BlockTemplate.ReservedRoot,
             BlockTemplate.Version.ToStringHex8(),
             bitsBytes.ToHexString(),
             BlockTemplate.CurTime.ToStringHex8()
         };
-
-        var testB1 = "0000000000a5e40e8ba291bd7e8649747fa7fb8a7af39f5bacdb7433cd2f5971".HexToByteArray();
-        var testB2 = "0000000000a5e40e8ba291bd7e8649747fa7fb8a7af39f5bacdb7433cd2f5971".HexToReverseByteArray();
-        var w1 = new Target(new uint256(testB1));
-        var w2 = new Target(new uint256(testB2));
-        var d1 = new Target(new uint256("0000000000a5e40e8ba291bd7e8649747fa7fb8a7af39f5bacdb7433cd2f5971"));
-        var d2 = new Target(new uint256(testB2.ToHexString()));
-        //        Job ID -Used so that stratum can match shares with the client that mined them.
-        //Hash of previous block -Needed in the header.
-        //Merkle Tree -This is a list of merkle branches that are hashed along with the newly formed coinbase transaction to get the merkle root.
-        //Witness Root -The witness root
-        //Tree Root -The root of the Urkel tree that maintains name states.Needed for the block header.
-        //Reserved Root - A root reserved for future use. Needed for block header.
-        //Block Version - Needed for the block header.
-        //nBits - Needed for the block header.This is the current network difficulty.
-        //nTime - Needed for block header.
     }
 
     public object GetJobParams(bool isNew)
     {
-        // jobParams[^1] = isNew;
         return jobParams;
     }
 
@@ -1041,7 +828,7 @@ public class ZEEVJob
         if(nonce.Length != 8)
             throw new StratumException(StratumError.Other, "incorrect size of nonce");
 
-        var nonceInt = uint.Parse(nonce, NumberStyles.HexNumber);
+        //var nonceInt = uint.Parse(nonce, NumberStyles.HexNumber);
 
         // validate version-bits (overt ASIC boost)
         uint versionBitsInt = 0;
@@ -1064,55 +851,55 @@ public class ZEEVJob
 
     #endregion // API-Surface
 
-    private static uint ToUInt32BigEndian(byte[] bytes, int startIndex)
-    {
-        if(BitConverter.IsLittleEndian)
-        {
-            Array.Reverse(bytes, startIndex, 4);
-        }
+    //private static uint ToUInt32BigEndian(byte[] bytes, int startIndex)
+    //{
+    //    if(BitConverter.IsLittleEndian)
+    //    {
+    //        Array.Reverse(bytes, startIndex, 4);
+    //    }
 
-        return BitConverter.ToUInt32(bytes, startIndex);
-    }
+    //    return BitConverter.ToUInt32(bytes, startIndex);
+    //}
 
-    public static BigInteger Double256(byte[] target)
-    {
-        if(target.Length != 32)
-        {
-            throw new ArgumentException("Target length must be 32 bytes");
-        }
+    //public static BigInteger Double256(byte[] target)
+    //{
+    //    if(target.Length != 32)
+    //    {
+    //        throw new ArgumentException("Target length must be 32 bytes");
+    //    }
 
-        BigInteger n = 0;
-        BigInteger hi, lo;
+    //    BigInteger n = 0;
+    //    BigInteger hi, lo;
 
 
-        hi = ToUInt32BigEndian(target, 0);
-        lo = ToUInt32BigEndian(target, 4);
-        n += (hi * 0x100000000 + lo) * BigInteger.Parse("1000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
+    //    hi = ToUInt32BigEndian(target, 0);
+    //    lo = ToUInt32BigEndian(target, 4);
+    //    n += (hi * 0x100000000 + lo) * BigInteger.Parse("1000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
 
-        hi = ToUInt32BigEndian(target, 8);
-        lo = ToUInt32BigEndian(target, 12);
-        n += (hi * 0x100000000 + lo) * BigInteger.Parse("100000000000000000000000000000000", NumberStyles.HexNumber);
+    //    hi = ToUInt32BigEndian(target, 8);
+    //    lo = ToUInt32BigEndian(target, 12);
+    //    n += (hi * 0x100000000 + lo) * BigInteger.Parse("100000000000000000000000000000000", NumberStyles.HexNumber);
 
-        hi = ToUInt32BigEndian(target, 16);
-        lo = ToUInt32BigEndian(target, 20);
-        n += (hi * 0x100000000 + lo) * BigInteger.Parse("10000000000000000", NumberStyles.HexNumber);
+    //    hi = ToUInt32BigEndian(target, 16);
+    //    lo = ToUInt32BigEndian(target, 20);
+    //    n += (hi * 0x100000000 + lo) * BigInteger.Parse("10000000000000000", NumberStyles.HexNumber);
 
-        hi = ToUInt32BigEndian(target, 24);
-        lo = ToUInt32BigEndian(target, 28);
-        n += (hi * 0x100000000 + lo) * BigInteger.Parse("1", NumberStyles.HexNumber);
+    //    hi = ToUInt32BigEndian(target, 24);
+    //    lo = ToUInt32BigEndian(target, 28);
+    //    n += (hi * 0x100000000 + lo) * BigInteger.Parse("1", NumberStyles.HexNumber);
 
-        return n;
-    }
+    //    return n;
+    //}
 
-    public static BigInteger GetDifficulty(Target target)
-    {
-        var d = BigInteger.Parse("00000000ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
-        var targetBytes = target.ToUInt256().ToBytes();
-        var n = Double256(targetBytes);
+    //public static BigInteger GetDifficulty(Target target)
+    //{
+    //    var d = BigInteger.Parse("00000000ffff0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
+    //    var targetBytes = target.ToUInt256().ToBytes();
+    //    var n = Double256(targetBytes);
 
-        if(n == 0)
-            return d;
+    //    if(n == 0)
+    //        return d;
 
-        return BigInteger.Divide(d, n);
-    }
+    //    return BigInteger.Divide(d, n);
+    //}
 }
