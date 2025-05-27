@@ -1,10 +1,10 @@
+using System.Net;
+using System.Net.Mail;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
-using MailKit.Net.Smtp;
 using Microsoft.Extensions.Hosting;
-using MimeKit;
 using Miningcore.Configuration;
 using Miningcore.Contracts;
 using Miningcore.Messaging;
@@ -111,18 +111,19 @@ public class NotificationService : BackgroundService
     {
         logger.Info(() => $"Sending '{subject.ToLower()}' email to {recipient}");
 
-        var message = new MimeMessage();
-        message.From.Add(new MailboxAddress(emailSenderConfig.FromName, emailSenderConfig.FromAddress));
-        message.To.Add(new MailboxAddress("", recipient));
-        message.Subject = subject;
-        message.Body = new TextPart("html") { Text = body };
-
-        using(var client = new SmtpClient())
+        MailMessage mailMessage = new MailMessage(new MailAddress(emailSenderConfig.FromAddress), new MailAddress(recipient))
         {
-            await client.ConnectAsync(emailSenderConfig.Host, emailSenderConfig.Port, cancellationToken: ct);
-            await client.AuthenticateAsync(emailSenderConfig.User, emailSenderConfig.Password, ct);
-            await client.SendAsync(message, ct);
-            await client.DisconnectAsync(true, ct);
+            From = new MailAddress(emailSenderConfig.FromAddress),
+            Subject = subject,
+            Body = body,
+            IsBodyHtml = true
+        };
+
+        using(var client = new SmtpClient(emailSenderConfig.Host, emailSenderConfig.Port))
+        {
+            client.Credentials = new NetworkCredential(emailSenderConfig.User, emailSenderConfig.Password);
+
+            await client.SendMailAsync(mailMessage);
         }
 
         logger.Info(() => $"Sent '{subject.ToLower()}' email to {recipient}");

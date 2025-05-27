@@ -51,7 +51,7 @@
         </PackageReference>
         <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.2.1" />
         <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.14" />
-        <PackageReference Include="Npgsql" Version="6.0.7" />
+        <PackageReference Include="Npgsql" Version="6.0.13" />
         <PackageReference Include="NSwag.AspNetCore" Version="13.17.0" />
         <PackageReference Include="NSwag.CodeGeneration.CSharp" Version="13.17.0" />
         <PackageReference Include="NSwag.MSBuild" Version="13.17.0">
@@ -65,9 +65,8 @@
         <PackageReference Include="FluentValidation.AspNetCore" Version="11.2.2" />
         <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.2.2" />
         <PackageReference Include="JetBrains.Annotations" Version="2022.3.1" />
-        <PackageReference Include="MailKit" Version="3.4.2" />
         <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.1" />
-        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="6.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="6.0.3" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="6.0.0" />
         <PackageReference Include="NBitcoin" Version="7.0.17" />
@@ -82,7 +81,11 @@
         <PackageReference Include="prometheus-net" Version="7.0.0" />
         <PackageReference Include="protobuf-net" Version="3.1.25" />
         <PackageReference Include="System.Diagnostics.Process" Version="4.3.0" />
+        <PackageReference Include="System.Net.Http" Version="4.3.4" />
         <PackageReference Include="System.Reactive" Version="5.0.0" />
+        <PackageReference Include="System.Security.Cryptography.Pkcs" Version="6.0.5" />
+        <PackageReference Include="System.Text.Json" Version="6.0.11" />
+        <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
     </ItemGroup>
 
     <ItemGroup>
