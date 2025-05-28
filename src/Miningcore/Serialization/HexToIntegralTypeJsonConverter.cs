@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using Miningcore.Extensions;
-using NBitcoin;
+using Blockcore.NBitcoin;
 using Newtonsoft.Json;
 
 namespace Miningcore.Serialization;

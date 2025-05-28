@@ -34,7 +34,6 @@ CREATE TABLE blocks
     source TEXT NULL,
     hash TEXT NULL,
 	created TIMESTAMPTZ NOT NULL,
-
     CONSTRAINT BLOCKS_POOL_HEIGHT UNIQUE (poolid, blockheight, type) DEFERRABLE INITIALLY DEFERRED
 );
 
@@ -47,7 +46,6 @@ CREATE TABLE balances
 	amount decimal(28,12) NOT NULL DEFAULT 0,
 	created TIMESTAMPTZ NOT NULL,
 	updated TIMESTAMPTZ NOT NULL,
-
 	primary key(poolid, address)
 );
 
@@ -72,7 +70,6 @@ CREATE TABLE miner_settings
 	paymentthreshold decimal(28,12) NOT NULL,
 	created TIMESTAMPTZ NOT NULL,
 	updated TIMESTAMPTZ NOT NULL,
-
 	primary key(poolid, address)
 );
 

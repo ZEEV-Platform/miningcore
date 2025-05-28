@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Numerics;
 using Autofac;
+using Blockcore.Networks;
 using JetBrains.Annotations;
 using Miningcore.Crypto;
 using Miningcore.Crypto.Hashing.Algorithms;
-using NBitcoin;
 using Newtonsoft.Json;
 
 namespace Miningcore.Configuration;
@@ -53,21 +53,6 @@ public partial class BitcoinTemplate
     public IHashAlgorithm HeaderHasherValue => headerHasherValue.Value;
     public IHashAlgorithm BlockHasherValue => blockHasherValue.Value;
     public IHashAlgorithm PoSBlockHasherValue => posBlockHasherValue.Value;
-
-    public BitcoinNetworkParams GetNetwork(ChainName chain)
-    {
-        if(Networks == null || Networks.Count == 0)
-            return null;
-
-        if(chain == ChainName.Mainnet)
-            return Networks["main"];
-        else if(chain == ChainName.Testnet)
-            return Networks["test"];
-        else if(chain == ChainName.Regtest)
-            return Networks["regtest"];
-
-        throw new NotSupportedException("unsupported network type");
-    }
 
     #region Overrides of CoinTemplate
 
@@ -121,18 +106,6 @@ public partial class EquihashCoinTemplate
 
         [JsonIgnore]
         public ulong LastFoundersRewardBlockHeight => FoundersRewardSubsidyHalvingInterval + FoundersRewardSubsidySlowStartShift - 1;
-    }
-
-    public EquihashNetworkParams GetNetwork(ChainName chain)
-    {
-        if(chain == ChainName.Mainnet)
-            return Networks["main"];
-        else if(chain == ChainName.Testnet)
-            return Networks["test"];
-        else if(chain == ChainName.Regtest)
-            return Networks["regtest"];
-
-        throw new NotSupportedException("unsupported network type");
     }
 
     #region Overrides of CoinTemplate
@@ -217,16 +190,16 @@ public partial class ZEEVCoinTemplate
     public IHashAlgorithm BlockHasherValue => blockHasherValue.Value;
     public IHashAlgorithm PoSBlockHasherValue => posBlockHasherValue.Value;
 
-    public ZEEVNetworkParams GetNetwork(ChainName chain)
+    public ZEEVNetworkParams GetNetwork(NetworkType chain)
     {
         if(Networks == null || Networks.Count == 0)
             return null;
 
-        if(chain == ChainName.Mainnet)
+        if(chain == NetworkType.Mainnet)
             return Networks["main"];
-        else if(chain == ChainName.Testnet)
+        else if(chain == NetworkType.Testnet)
             return Networks["test"];
-        else if(chain == ChainName.Regtest)
+        else if(chain == NetworkType.Regtest)
             return Networks["regtest"];
 
         throw new NotSupportedException("unsupported network type");

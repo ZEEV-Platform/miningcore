@@ -25,13 +25,9 @@ using Miningcore.Api.Controllers;
 using Miningcore.Api.Middlewares;
 using Miningcore.Api.Responses;
 using Miningcore.Configuration;
-using Miningcore.Crypto.Hashing.Algorithms;
-using Miningcore.Crypto.Hashing.Equihash;
-using Miningcore.Crypto.Hashing.Ethash;
 using Miningcore.Extensions;
 using Miningcore.Messaging;
 using Miningcore.Mining;
-using Miningcore.Native;
 using Miningcore.Notifications;
 using Miningcore.Payments;
 using Miningcore.Persistence;
@@ -39,7 +35,6 @@ using Miningcore.Persistence.Dummy;
 using Miningcore.Persistence.Postgres;
 using Miningcore.Persistence.Postgres.Repositories;
 using Miningcore.Util;
-using NBitcoin.Zcash;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema;
 using Newtonsoft.Json.Schema.Generation;
@@ -768,34 +763,12 @@ public class Program : BackgroundService
     {
         await ConfigurePostgresCompatibilityOptions(services);
 
-        ZcashNetworks.Instance.EnsureRegistered();
-
         var messageBus = services.GetService<IMessageBus>();
         var rmsm = services.GetService<RecyclableMemoryStreamManager>();
 
         // Configure RecyclableMemoryStream
         rmsm.MaximumFreeSmallPoolBytes = clusterConfig.Memory?.RmsmMaximumFreeSmallPoolBytes ?? 0x100000;   // 1 MB
         rmsm.MaximumFreeLargePoolBytes = clusterConfig.Memory?.RmsmMaximumFreeLargePoolBytes ?? 0x800000;   // 8 MB
-
-        // Configure Equihash
-        EquihashSolver.messageBus = messageBus;
-        EquihashSolver.MaxThreads = clusterConfig.EquihashMaxThreads ?? 1;
-
-        // Configure Ethhash
-        Dag.messageBus = messageBus;
-
-        // Configure Verthash
-        Verthash.messageBus = messageBus;
-
-        // Configure Cryptonight
-        Cryptonight.messageBus = messageBus;
-        Cryptonight.InitContexts(GetDefaultConcurrency(clusterConfig.CryptonightMaxThreads));
-
-        // Configure RandomX
-        RandomX.messageBus = messageBus;
-
-        // Configure RandomARQ
-        RandomARQ.messageBus = messageBus;
     }
 
     private static async Task ConfigurePostgresCompatibilityOptions(IServiceProvider services)

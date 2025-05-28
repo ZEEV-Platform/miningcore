@@ -2,8 +2,7 @@ using System.IO.Compression;
 using System.Reactive.Disposables;
 using System.Text;
 using Microsoft.Extensions.Hosting;
-using Miningcore.Blockchain.Bitcoin.Configuration;
-using Miningcore.Blockchain.Cryptonote.Configuration;
+using Miningcore.Blockchain.ZEEV.Configuration;
 using Miningcore.Configuration;
 using Miningcore.Contracts;
 using Miningcore.Extensions;
@@ -94,8 +93,7 @@ public class BtStreamReceiver : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         var endpoints = clusterConfig.Pools.Select(x =>
-                x.Extra.SafeExtensionDataAs<BitcoinPoolConfigExtra>()?.BtStream ??
-                x.Extra.SafeExtensionDataAs<CryptonotePoolConfigExtra>()?.BtStream)
+                x.Extra.SafeExtensionDataAs<ZEEVPoolConfigExtra>()?.BtStream)
             .Where(x => x != null)
             .DistinctBy(x => $"{x.Url}:{x.SharedEncryptionKey}")
             .ToArray();

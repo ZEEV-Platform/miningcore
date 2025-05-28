@@ -2,17 +2,19 @@ using System.Globalization;
 using System.Reactive;
 using System.Reactive.Linq;
 using Autofac;
+using Blockcore.NBitcoin;
+using Blockcore.Networks;
 using Miningcore.Blockchain.ZEEV.Configuration;
 using Miningcore.Blockchain.ZEEV.DaemonResponses;
 using Miningcore.Configuration;
 using Miningcore.Contracts;
+using Miningcore.Crypto.Hashing.Algorithms;
 using Miningcore.Extensions;
 using Miningcore.Messaging;
 using Miningcore.Mining;
 using Miningcore.Notifications.Messages;
 using Miningcore.Rpc;
 using Miningcore.Time;
-using NBitcoin;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using static Miningcore.Util.ActionUtils;
@@ -457,11 +459,14 @@ public abstract class ZEEVJobManagerBase<TJob> : JobManagerBase<TJob>
         var difficultyResponse = responses[3].Response.ToObject<JToken>();
         var addressInfoResponse = responses[4].Error == null ? responses[4].Response.ToObject<AddressInfo>() : null;
 
+        var networksSelector = Blockcore.Networks.ZEEV.Networks.ZEEV;
+
         // chain detection
         if(!hasLegacyDaemon)
-            network = Network.GetNetwork(blockchainInfoResponse.Chain.ToLower());
+            //network = NetworkRegistration.GetNetwork(blockchainInfoResponse.Chain.ToLower());
+            network = blockchainInfoResponse.Chain.ToLower() == "test" ? networksSelector.Testnet.Invoke() : networksSelector.Mainnet.Invoke();
         else
-            network = daemonInfoResponse.Testnet ? Network.TestNet : Network.Main;
+            network = daemonInfoResponse.Testnet ? networksSelector.Testnet.Invoke() : networksSelector.Mainnet.Invoke();
 
         PostChainIdentifyConfigure();
 

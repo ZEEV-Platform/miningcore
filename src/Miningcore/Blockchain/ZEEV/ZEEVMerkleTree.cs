@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using Miningcore.Crypto.Hashing.Handshake.Blake2b;
+using Blockcore.NBitcoin.Crypto;
 using Miningcore.Extensions;
 using Contract = Miningcore.Contracts.Contract;
 
@@ -109,9 +109,7 @@ namespace Miningcore.Blockchain.ZEEV
 
         private byte[] DoubleDigest(byte[] input)
         {
-            var blake2bConfig = new Blake2BConfig();
-            blake2bConfig.OutputSizeInBytes = 32;
-            return Blake2B.ComputeHash(input, blake2bConfig);
+            return Blake2B.Blake2B256().ComputeHash(input);
         }
 
         private IEnumerable<byte> DoubleDigest(IEnumerable<byte> input)

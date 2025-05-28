@@ -2,13 +2,8 @@ using System.Reflection;
 using Autofac;
 using Miningcore.Api;
 using Miningcore.Banning;
-using Miningcore.Blockchain.Bitcoin;
-using Miningcore.Blockchain.Cryptonote;
-using Miningcore.Blockchain.Equihash;
-using Miningcore.Blockchain.Ethereum;
 using Miningcore.Configuration;
 using Miningcore.Crypto;
-using Miningcore.Crypto.Hashing.Equihash;
 using Miningcore.Messaging;
 using Miningcore.Mining;
 using Miningcore.Notifications;
@@ -20,7 +15,6 @@ using Newtonsoft.Json.Serialization;
 using Module = Autofac.Module;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IO;
-using Miningcore.Blockchain.Ergo;
 using Miningcore.Nicehash;
 using Miningcore.Pushover;
 using Miningcore.Blockchain.ZEEV;
@@ -82,11 +76,6 @@ public class AutofacModule : Module
             .PropertiesAutowired();
 
         builder.RegisterAssemblyTypes(ThisAssembly)
-            .Where(t => t.IsAssignableTo<EquihashSolver>())
-            .PropertiesAutowired()
-            .AsSelf();
-
-        builder.RegisterAssemblyTypes(ThisAssembly)
             .Where(t => t.IsAssignableTo<ControllerBase>())
             .PropertiesAutowired()
             .AsSelf();
@@ -143,33 +132,6 @@ public class AutofacModule : Module
         builder.RegisterType<PROPPaymentScheme>()
             .Keyed<IPayoutScheme>(PayoutScheme.PROP)
             .SingleInstance();
-
-        //////////////////////
-        // Bitcoin and family
-
-        builder.RegisterType<BitcoinJobManager>();
-
-        //////////////////////
-        // Cryptonote
-
-        builder.RegisterType<CryptonoteJobManager>();
-
-        //////////////////////
-        // Ethereum
-
-        builder.RegisterType<EthereumJobManager>();
-        builder.RegisterType<EthereumJobManager>();
-
-        //////////////////////
-        // ZCash
-
-        builder.RegisterType<EquihashJobManager>();
-
-        //////////////////////
-        // Ergo
-
-        builder.RegisterType<EquihashJobManager>();
-        builder.RegisterType<ErgoJobManager>();
 
         //////////////////////
         // ZEEV

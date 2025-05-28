@@ -1,7 +1,7 @@
-using Miningcore.Crypto.Hashing.Handshake.Blake2b;
+using Blockcore.NBitcoin;
+using Blockcore.NBitcoin.Crypto;
+using Blockcore.NBitcoin.DataEncoders;
 using Miningcore.Extensions;
-using NBitcoin;
-using NBitcoin.DataEncoders;
 using System.Globalization;
 using System.IO;
 using YamlDotNet.Core.Tokens;
@@ -17,7 +17,10 @@ namespace Miningcore.Blockchain.ZEEV
 
         public ZEEVBlockHeader(byte[] bytes)
         {
-            ReadWrite(new BitcoinStream(bytes));
+            using(var ms = new MemoryStream(bytes))
+            {
+                ReadWrite(new BitcoinStream(ms, true));
+            }
         }
 
         public ZEEVBlockHeader()
@@ -150,9 +153,7 @@ namespace Miningcore.Blockchain.ZEEV
 
         private byte[] maskHash(byte[] prevBlockHash)
         {
-            var blake2bConfig = new Blake2BConfig();
-            blake2bConfig.OutputSizeInBytes = 32;
-            return Blake2B.ComputeHash(prevBlockHash.Concat(new byte[32]).ToArray(), blake2bConfig);
+            return Blake2B.Blake2B256().ComputeHash(prevBlockHash.Concat(new byte[32]).ToArray());
         }
 
         private byte[] subHash()
@@ -172,17 +173,13 @@ namespace Miningcore.Blockchain.ZEEV
                 var bytes = ms.GetBuffer();
                 Array.Resize(ref bytes, (int) ms.Length);
 
-                var blake2bConfig = new Blake2BConfig();
-                blake2bConfig.OutputSizeInBytes = 32;
-                return Blake2B.ComputeHash(bytes, blake2bConfig);
+                return Blake2B.Blake2B256().ComputeHash(bytes);
             }
         }
 
         private byte[] commitHash(byte[] prevBlockHash)
         {
-            var blake2bConfig = new Blake2BConfig();
-            blake2bConfig.OutputSizeInBytes = 32;
-            return Blake2B.ComputeHash(subHash().Concat(maskHash(prevBlockHash)).ToArray(), blake2bConfig);
+            return Blake2B.Blake2B256().ComputeHash(subHash().Concat(maskHash(prevBlockHash)).ToArray());
         }
 
         private byte[] padding(int size, byte[] prevBlock, byte[] treeRoot)
@@ -337,7 +334,7 @@ namespace Miningcore.Blockchain.ZEEV
                 var read = stream.Inner.ReadEx(data, stream.ReadCancellationToken);
                 if(read == 0)
                     throw new EndOfStreamException("No more byte to read");
-                stream.Counter.AddReaden(read);
+                stream.Counter.AddRead(read);
             }
         }
     }

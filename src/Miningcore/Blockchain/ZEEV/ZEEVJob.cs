@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Globalization;
-using System.Numerics;
 using System.Text;
 using Autofac.Features.OwnedInstances;
 using System.Text.RegularExpressions;
@@ -8,24 +7,24 @@ using Miningcore.Blockchain.ZEEV.Configuration;
 using Miningcore.Blockchain.ZEEV.DaemonResponses;
 using Miningcore.Configuration;
 using Miningcore.Crypto;
-using Miningcore.Crypto.Hashing.Handshake;
 using Miningcore.Extensions;
 using Miningcore.Stratum;
 using Miningcore.Time;
 using Miningcore.Util;
-using NBitcoin;
-using NBitcoin.Altcoins;
-using NBitcoin.DataEncoders;
+using Blockcore.NBitcoin;
 using Newtonsoft.Json.Linq;
-using Org.BouncyCastle.Utilities;
-using Parlot.Fluent;
-using static Org.BouncyCastle.Bcpg.Attr.ImageAttrib;
 using Contract = Miningcore.Contracts.Contract;
-using Transaction = NBitcoin.Transaction;
-using uint256 = NBitcoin.uint256;
+//using Transaction = Blockcore.NBitcoin.Transaction;
+using Transaction = Blockcore.Consensus.TransactionInfo.Transaction;
+using uint256 = Blockcore.NBitcoin.uint256;
 using System;
-using Org.BouncyCastle.Utilities.Encoders;
-using Miningcore.Crypto.Hashing.Handshake.Blake2b;
+using Blockcore.NBitcoin.DataEncoders;
+using Blockcore.Networks;
+using Blockcore.Consensus.ScriptInfo;
+using Org.BouncyCastle.Math;
+using Blockcore.NBitcoin.Crypto;
+using Blockcore.Consensus.TransactionInfo;
+using Miningcore.Crypto.Hashing.Algorithms;
 
 namespace Miningcore.Blockchain.ZEEV;
 
@@ -92,12 +91,10 @@ public class ZEEVJob
         var witnessMt = new ZEEVMerkleTree(witnessHashes);
 
         var first = coinbaseHash;
-        var blake2bConfig = new Blake2BConfig();
-        blake2bConfig.OutputSizeInBytes = 32;
 
         foreach(var step in mt.Steps)
         {
-            first = Blake2B.ComputeHash(first.Concat(step).ToArray(), blake2bConfig);
+            first = Blake2B.Blake2B256().ComputeHash(first.Concat(step).ToArray());
         }
 
         var merkleRoot = mt.WithFirst(coinbaseHash).ToNewReverseArray();
@@ -107,7 +104,7 @@ public class ZEEVJob
         first = new uint256().ToBytes();
         foreach(var step in witnessMt.Steps)
         {
-            first = Blake2B.ComputeHash(first.Concat(step).ToArray(), blake2bConfig);
+            first = Blake2B.Blake2B256().ComputeHash(first.Concat(step).ToArray());
         }
 
         var witnessRoot = witnessMt.WithFirst(new uint256().ToBytes()).ToNewReverseArray();
@@ -184,7 +181,7 @@ public class ZEEVJob
 
         //we have to generate coinbase hash here
         coinbaseHash = new byte[32];
-        coinbaseHasher.Digest(coinbaseInitial.Concat(coinbaseFinal).ToArray(), coinbaseHash);
+        ((Blake2b) coinbaseHasher).Digest(coinbaseInitial.Concat(coinbaseFinal).ToArray(), out coinbaseHash);
     }
 
     protected virtual void AppendCoinbaseFinal(BitcoinStream bs)
@@ -273,8 +270,10 @@ public class ZEEVJob
 
     protected virtual Transaction CreateOutputTransaction()
     {
-        rewardToPool = new Money(BlockTemplate.CoinbaseValue, MoneyUnit.Satoshi);
-        var tx = Transaction.Create(network);
+        rewardToPool = new Money(BlockTemplate.CoinbaseValue, MoneyUnit.Planck);
+        var tx = new Transaction();
+        //var tx = Transaction.Create(network);
+        //var tx = network.CreateTransaction .Create(network);
 
         if(coin.HasPayee)
             rewardToPool = CreatePayeeOutput(tx, rewardToPool);
@@ -289,7 +288,7 @@ public class ZEEVJob
             rewardToPool = CreateMinerFundOutputs(tx, rewardToPool);
 
         // Remaining amount goes to pool
-        tx.Outputs.Add(rewardToPool, poolAddressDestination);
+        tx.Outputs.Add(new TxOut(rewardToPool, poolAddressDestination));
 
         return tx;
     }
@@ -298,10 +297,10 @@ public class ZEEVJob
     {
         if(payeeParameters?.PayeeAmount != null && payeeParameters.PayeeAmount.Value > 0)
         {
-            var payeeReward = new Money(payeeParameters.PayeeAmount.Value, MoneyUnit.Satoshi);
+            var payeeReward = new Money(payeeParameters.PayeeAmount.Value, MoneyUnit.Planck);
             reward -= payeeReward;
 
-            tx.Outputs.Add(payeeReward, ZEEVUtils.AddressToDestination(payeeParameters.Payee, network));
+            tx.Outputs.Add(new TxOut(payeeReward, ZEEVUtils.AddressToDestination(payeeParameters.Payee, network)));
         }
 
         return reward;
@@ -440,8 +439,8 @@ public class ZEEVJob
 
         // build coinbase
         var coinbase = SerializeCoinbase(extraNonce1, extraNonce2);
-        Span<byte> coinbaseHash = stackalloc byte[32];
-        coinbaseHasher.Digest(coinbase, coinbaseHash);
+        var coinbaseHash = new byte[32];
+        ((Blake2b)coinbaseHasher).Digest(coinbase, out coinbaseHash);
 
         var header = SerializeHeader(coinbaseHash, nTime, nonce, (extraNonce1 + extraNonce2).HexToByteArray(), context.VersionRollingMask, versionBits);
         var headerBytesMiner = header.ToMiner();
@@ -590,7 +589,7 @@ public class ZEEVJob
                         var payeeDestination = ZEEVUtils.AddressToDestination(masterNode.Payee, network);
                         var payeeReward = masterNode.Amount;
 
-                        tx.Outputs.Add(payeeReward, payeeDestination);
+                        tx.Outputs.Add(new TxOut(payeeReward, payeeDestination));
                         reward -= payeeReward;
                     }
                 }
@@ -604,7 +603,7 @@ public class ZEEVJob
                 var payeeAddress = ZEEVUtils.AddressToDestination(superBlock.Payee, network);
                 var payeeReward = superBlock.Amount;
 
-                tx.Outputs.Add(payeeReward, payeeAddress);
+                tx.Outputs.Add(new TxOut(payeeReward, payeeAddress));
                 reward -= payeeReward;
             }
         }
@@ -614,7 +613,7 @@ public class ZEEVJob
             var payeeAddress = ZEEVUtils.AddressToDestination(masterNodeParameters.Payee, network);
             var payeeReward = masterNodeParameters.PayeeAmount;
 
-            tx.Outputs.Add(payeeReward, payeeAddress);
+            tx.Outputs.Add(new TxOut(payeeReward, payeeAddress));
             reward -= payeeReward;
         }
 
@@ -646,7 +645,7 @@ public class ZEEVJob
                         var payeeAddress = ZEEVUtils.AddressToDestination(Founder.Payee, network);
                         var payeeReward = Founder.Amount;
 
-                        tx.Outputs.Add(payeeReward, payeeAddress);
+                        tx.Outputs.Add(new TxOut(payeeReward, payeeAddress));
                         reward -= payeeReward;
                     }
                 }
@@ -669,7 +668,7 @@ public class ZEEVJob
         if (!string.IsNullOrEmpty(minerFundParameters.Addresses?.FirstOrDefault()))
         {
             var payeeAddress = ZEEVUtils.AddressToDestination(minerFundParameters.Addresses[0], network);
-            tx.Outputs.Add(payeeReward, payeeAddress);
+            tx.Outputs.Add(new TxOut(payeeReward, payeeAddress));
         }
 
         reward -= payeeReward;
@@ -704,7 +703,7 @@ public class ZEEVJob
         Contract.Requires<ArgumentException>(!string.IsNullOrEmpty(jobId));
 
         coin = pc.Template.As<ZEEVCoinTemplate>();
-        networkParams = coin.GetNetwork(network.ChainName);
+        networkParams = coin.GetNetwork(network.NetworkType);
         txVersion = coin.CoinbaseTxVersion;
         this.network = network;
         this.clock = clock;
@@ -717,7 +716,8 @@ public class ZEEVJob
 
         scriptSigFinalBytes = new Script(Op.GetPushOp(Encoding.UTF8.GetBytes(coinbaseString))).ToBytes();
 
-        Difficulty = new Target(System.Numerics.BigInteger.Parse(BlockTemplate.Target, NumberStyles.HexNumber)).Difficulty;
+        //Difficulty = new Target(new BigInteger.Parse(BlockTemplate.Target, NumberStyles.HexNumber)).Difficulty;
+        Difficulty = new Target(new BigInteger(BlockTemplate.Target.HexToByteArray().ToArray())).Difficulty;
 
         extraNoncePlaceHolderLength = ZEEVConstants.ExtranoncePlaceHolderLength;
         this.isPoS = isPoS;

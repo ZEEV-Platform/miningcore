@@ -1,6 +1,7 @@
+using Blockcore.NBitcoin;
+using Blockcore.NBitcoin.DataEncoders;
+using Blockcore.Networks;
 using System.Diagnostics;
-using NBitcoin;
-using NBitcoin.DataEncoders;
 
 namespace Miningcore.Blockchain.ZEEV;
 
