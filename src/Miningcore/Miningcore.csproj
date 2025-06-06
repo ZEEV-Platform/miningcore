@@ -84,13 +84,13 @@
 
     <ItemGroup>
         <Reference Include="Blockcore">
-          <HintPath>..\..\..\blockcorefalcon\src\Blockcore\bin\Debug\net8.0\Blockcore.dll</HintPath>
+          <HintPath>..\..\libs\Blockcore.dll</HintPath>
         </Reference>
         <Reference Include="Blockcore.Networks.ZEEV">
-          <HintPath>..\..\..\blockcorefalcon\src\Networks\Blockcore.Networks.ZEEV\bin\Debug\net8.0\Blockcore.Networks.ZEEV.dll</HintPath>
+          <HintPath>..\..\libs\Blockcore.Networks.ZEEV.dll</HintPath>
         </Reference>
         <Reference Include="BouncyCastle.Cryptography">
-          <HintPath>..\..\..\blockcorefalcon\src\Blockcore\bin\Debug\net8.0\BouncyCastle.Cryptography.dll</HintPath>
+          <HintPath>..\..\libs\BouncyCastle.Cryptography.dll</HintPath>
         </Reference>
         <Reference Include="WebSocketManager">
             <HintPath>..\..\libs\WebSocketManager.dll</HintPath>
