@@ -92,6 +92,29 @@
         <Reference Include="BouncyCastle.Cryptography">
           <HintPath>..\..\libs\BouncyCastle.Cryptography.dll</HintPath>
         </Reference>
+		
+        <Reference Include="BouncyCastle.Cryptography">
+          <HintPath>..\..\libs\Blockcore.Features.Wallet.dll</HintPath>
+        </Reference>
+        <Reference Include="BouncyCastle.Cryptography">
+          <HintPath>..\..\libs\Blockcore.Features.RPC.dll</HintPath>
+        </Reference>
+		<Reference Include="BouncyCastle.Cryptography">
+          <HintPath>..\..\libs\Blockcore.Features.NodeHost.dll</HintPath>
+        </Reference>
+		<Reference Include="BouncyCastle.Cryptography">
+          <HintPath>..\..\libs\Blockcore.Features.Miner.dll</HintPath>
+        </Reference>
+        <Reference Include="BouncyCastle.Cryptography">
+          <HintPath>..\..\libs\Blockcore.Features.MemoryPool.dll</HintPath>
+        </Reference>
+		<Reference Include="BouncyCastle.Cryptography">
+          <HintPath>..\..\libs\Blockcore.Features.Consensus.dll</HintPath>
+        </Reference>
+		<Reference Include="BouncyCastle.Cryptography">
+          <HintPath>..\..\libs\Blockcore.Features.BlockStore.dll</HintPath>
+        </Reference>
+		
         <Reference Include="WebSocketManager">
             <HintPath>..\..\libs\WebSocketManager.dll</HintPath>
         </Reference>
