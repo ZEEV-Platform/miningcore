@@ -290,7 +290,7 @@ public class ZEEVPayoutHandler : PayoutHandlerBase,
                         var unlockResult = await rpcClient.ExecuteAsync<JToken>(logger, ZEEVCommands.WalletPassphrase, ct, new[]
                         {
                             extraPoolPaymentProcessingConfig.WalletPassword,
-                            (object) 5 // unlock for N seconds
+                            (object) 60 // unlock for N seconds
                         });
 
                         if(unlockResult.Error == null)
