@@ -250,6 +250,23 @@ public class ZEEVPayoutHandler : PayoutHandlerBase,
 
             var didUnlockWallet = false;
 
+            //The password exists, unlock the wallet
+            if(!string.IsNullOrEmpty(extraPoolPaymentProcessingConfig?.WalletPassword))
+            {
+                logger.Info(() => $"[{LogCategory}] Unlocking wallet");
+
+                var unlockResult = await rpcClient.ExecuteAsync<JToken>(logger, ZEEVCommands.WalletPassphrase, ct, new[]
+                {
+                            extraPoolPaymentProcessingConfig.WalletPassword,
+                            extraPoolPaymentProcessingConfig.WalletUnLockExpiration.ToString()
+                        });
+
+                if(unlockResult.Error == null)
+                {
+                    didUnlockWallet = true;
+                }
+            }
+
             // send command
             tryTransfer:
             var result = await rpcClient.ExecuteAsync<string>(logger, ZEEVCommands.SendMany, ct, args);
@@ -290,7 +307,7 @@ public class ZEEVPayoutHandler : PayoutHandlerBase,
                         var unlockResult = await rpcClient.ExecuteAsync<JToken>(logger, ZEEVCommands.WalletPassphrase, ct, new[]
                         {
                             extraPoolPaymentProcessingConfig.WalletPassword,
-                            (object) 60 // unlock for N seconds
+                            extraPoolPaymentProcessingConfig.WalletUnLockExpiration.ToString()
                         });
 
                         if(unlockResult.Error == null)
